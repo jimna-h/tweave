@@ -227,6 +227,94 @@ Inline numbers round to 4 digits by default; put `digits <- 2` in any chunk to c
 
 ---
 
+## Optional: a nicer setup with VS Code
+
+You can write `.typ` files in any text editor, but [VS Code](https://code.visualstudio.com/) gives you syntax highlighting, a live preview, and a one-keystroke build. Setup takes about 5 minutes.
+
+### Install the extensions
+
+1. Open VS Code. On the left edge, click the icon that looks like four squares (or press **Ctrl + Shift + X**). This is the Extensions pane — a store of free add-ons.
+2. In its search box, type **Tinymist Typst** and click **Install** on the first result. This gives you Typst syntax highlighting, error checking, and a live preview.
+3. (Optional) Search **vscode-pdf** and install it, so finished PDFs open inside VS Code instead of a separate program.
+
+### Open your homework folder
+
+Use **File → Open Folder...** and pick the folder where your `.typ` files live. Opening the *folder* (not just a single file) matters: it makes the built-in terminal start in the right place and lets VS Code remember settings per project.
+
+Then open a terminal inside VS Code with **Terminal → New Terminal** (or **Ctrl + `** — that's the backtick key, above Tab). It's the same PowerShell/Terminal from earlier, already in your project folder, so you can build with:
+
+```sh
+tweave homework4.typ
+```
+
+> **Windows users:** if `tweave` isn't recognized here but works in a regular PowerShell window, VS Code may be using a different shell. Click the `∨` next to the `+` in the terminal panel and choose **PowerShell**.
+
+### One-keystroke builds (optional but great)
+
+VS Code can run your build when you press **Ctrl + Shift + B**, using a small config file called a *task*.
+
+1. In your project folder, create a folder named `.vscode` (with the leading dot).
+2. Inside it, create a file named `tasks.json` containing:
+
+   ```json
+   {
+     "version": "2.0.0",
+     "tasks": [
+       {
+         "label": "tweave: build current file",
+         "type": "shell",
+         "command": "tweave",
+         "args": ["${fileBasename}"],
+         "options": { "cwd": "${fileDirname}" },
+         "group": { "kind": "build", "isDefault": true }
+       }
+     ]
+   }
+   ```
+
+   You don't need to understand this file — it just tells VS Code: "when asked to build, run `tweave` on whatever file is currently open, from that file's folder."
+
+3. Open your `.typ` file, press **Ctrl + Shift + B**, and watch the terminal knit and compile it. From now on, your edit-build-check loop is: make a change, **Ctrl + S**, **Ctrl + Shift + B**, look at the PDF.
+
+### A starter snippet (optional)
+
+Every homework file starts with the same six lines of boilerplate. VS Code *snippets* let you type a short word and press Tab to expand it into all of that, with the cursor jumping between the fill-in spots.
+
+1. Press **Ctrl + Shift + P** (opens the Command Palette — a search box for every VS Code command), type **snippets**, and choose **Snippets: Configure Snippets**.
+2. Pick **typst** from the list (it appears because you installed Tinymist). This opens a file called `typst.json`.
+3. Paste this inside the outermost `{ }` (replacing the commented examples if you like):
+
+   ```json
+   "tweave homework setup": {
+     "prefix": "tweave",
+     "body": [
+       "#import \"@local/tweave:0.1.0\": *",
+       "#show: tweave.with(",
+       "  title: \"${1:Title}\",",
+       "  author: \"${2:Your Name}\",",
+       ")",
+       "",
+       "```{r}",
+       "# Global Setup",
+       "set.seed(123) # for reproducibility",
+       "```",
+       "",
+       "$0"
+     ],
+     "description": "tweave template import + global R setup chunk"
+   }
+   ```
+
+4. Save. Now in any `.typ` file, type `tweave` and press **Tab**: the whole header appears, your cursor lands on the title, **Tab** jumps to the author, and a final **Tab** drops you below the setup chunk, ready to write `#nextquestion()`.
+
+### One important gotcha: the live preview doesn't run R
+
+Tinymist's preview button (top-right when a `.typ` file is open) compiles your document *directly*, skipping the R step — so R chunks show up as plain code blocks, inline `` `r ...` `` values appear as literal text, and plots are missing. This is normal, not a bug.
+
+Use the preview for checking **layout, math, and prose**, and use `tweave` / **Ctrl + Shift + B** whenever you need to see **actual R results**. If you want a live-ish view of the real output, run a build and open `yourfile.knit.pdf` in a VS Code tab — it refreshes each time you rebuild.
+
+---
+
 ## Troubleshooting
 
 **`typst : The term 'typst' is not recognized...`**
