@@ -1,10 +1,10 @@
-# QMDTemplate (`rsetup`)
+# tweave
 
 **Write your statistics homework in Typst, with live R code — no Quarto required.**
 
-QMDTemplate knits R code chunks embedded in a `.typ` file, then compiles the result straight to PDF. You get Typst's fast, clean typesetting plus reproducible R output: code blocks, console output, plots, and inline values that update every time you build.
+tweave knits R code chunks embedded in a `.typ` file, then compiles the result straight to PDF. You get Typst's fast, clean typesetting plus reproducible R output: code blocks, console output, plots, and inline values that update every time you build.
 
-It ships with a stats-homework-focused Typst package (`rsetup`) that provides:
+It ships with a stats-homework-focused Typst package (also called `tweave`) that provides:
 
 - **Auto-numbered questions** — `#nextquestion()` and `#subquestion()` produce `Question 1`, `1a.`, `1b.`, … with no manual bookkeeping
 - **`#questionbox[...]`** — a tinted callout that visually separates the assignment prompt from your answer (works with code chunks and math inside)
@@ -20,7 +20,7 @@ See [`examples/example1.typ`](examples/example1.typ) and its [rendered PDF](exam
 yourfile.typ  ──knitr──▶  yourfile.knit.typ  ──typst──▶  yourfile.knit.pdf
 ```
 
-`build.R` runs your document through **knitr** (an R package that executes the R chunks and inserts their formatted results), then calls `typst compile` on the result. You'll set up a one-word command, `rbuild`, that does both steps for you.
+`build.R` runs your document through **knitr** (an R package that executes the R chunks and inserts their formatted results), then calls `typst compile` on the result. You'll set up a one-word command, `tweave`, that does both steps for you.
 
 ---
 
@@ -66,16 +66,16 @@ If it prints a version number like `typst 0.13.0`, you're good. If it says the c
 
 ### Step 1 — Download this repository
 
-Click the green **Code** button at the top of this GitHub page and choose **Download ZIP**. Unzip it somewhere permanent — somewhere you won't delete or move it later, because the `rbuild` command you set up in Step 3 will point at this folder forever.
+Click the green **Code** button at the top of this GitHub page and choose **Download ZIP**. Unzip it somewhere permanent — somewhere you won't delete or move it later, because the `tweave` command you set up in Step 3 will point at this folder forever.
 
-Good choice: `C:\Users\YourName\QMDTemplate` (Windows) or `~/QMDTemplate` (macOS).
+Good choice: `C:\Users\YourName\tweave` (Windows) or `~/tweave` (macOS).
 Bad choice: your Downloads folder or your Desktop clutter pile.
 
-(If you know git: `git clone https://github.com/jimna-h/QMDTemplate` does the same thing.)
+(If you know git: `git clone https://github.com/jimna-h/tweave` does the same thing.)
 
 ### Step 2 — Install the Typst package
 
-Typst looks for locally-installed packages in one specific folder on your computer. We need to copy the `rsetup` folder from this repo into it.
+Typst looks for locally-installed packages in one specific folder on your computer. We need to copy the *inner* `tweave` folder (the one containing `0.1.0`) from this repo into it.
 
 **Windows:**
 
@@ -87,23 +87,23 @@ Typst looks for locally-installed packages in one specific folder on your comput
 
    *If Windows says the folder doesn't exist:* open File Explorer, paste `%LOCALAPPDATA%` in the address bar, hit Enter, and create the folders yourself — a folder named `typst`, inside it `packages`, inside that `local`.
 
-2. Copy the entire `rsetup` folder from the repo you downloaded into this `local` folder.
+2. Copy the inner `tweave` folder (the one that contains `0.1.0`) from the repo you downloaded into this `local` folder.
 
-**macOS:** in Finder, press **Cmd + Shift + G**, paste `~/Library/Application Support/typst/packages/local` (create the folders if needed), and copy `rsetup` in.
+**macOS:** in Finder, press **Cmd + Shift + G**, paste `~/Library/Application Support/typst/packages/local` (create the folders if needed), and copy the inner `tweave` folder in.
 
-**Linux:** copy `rsetup` into `~/.local/share/typst/packages/local/`.
+**Linux:** copy the inner `tweave` folder into `~/.local/share/typst/packages/local/`.
 
 **Check it worked:** you should be able to navigate to a file at
 
 ```
-...\typst\packages\local\rsetup\0.1.0\rsetup.typ
+...\typst\packages\local\tweave\0.1.0\tweave.typ
 ```
 
 The `0.1.0` folder in the middle matters — don't flatten it out.
 
-### Step 3 — Create the `rbuild` command
+### Step 3 — Create the `tweave` command
 
-Right now, building a document would mean typing a long, ugly command every time. Instead we'll teach your terminal a shortcut: `rbuild`.
+Right now, building a document would mean typing a long, ugly command every time. Instead we'll teach your terminal a shortcut: `tweave`.
 
 #### Windows (PowerShell)
 
@@ -136,8 +136,8 @@ PowerShell has a *profile* — a script file it runs automatically every time it
 3. **Add the shortcut.** Paste this into Notepad, replacing both paths with *your* Rscript path from step 1 and the folder where *you* unzipped the repo:
 
    ```powershell
-   function rbuild {
-       & "C:\Program Files\R\R-4.5.2\bin\x64\Rscript.exe" "C:\Users\YourName\QMDTemplate\build.R" $args
+   function tweave {
+       & "C:\Program Files\R\R-4.5.2\bin\x64\Rscript.exe" "C:\Users\YourName\tweave\build.R" $args
    }
    ```
 
@@ -153,20 +153,20 @@ PowerShell has a *profile* — a script file it runs automatically every time it
    >
    > answer `Y`, then restart PowerShell again. This allows scripts you wrote yourself while still blocking unsigned scripts from the internet.
 
-**Check it worked:** type `rbuild` and hit Enter. If you see an R error about a missing file (rather than *"rbuild is not recognized"*), the shortcut works — it just has no document to build yet.
+**Check it worked:** type `tweave` and hit Enter. If you see an R error about a missing file (rather than *"tweave is not recognized"*), the shortcut works — it just has no document to build yet.
 
 #### macOS / Linux
 
-The repo includes a small launcher script called `rbuild`. You just need to make it reachable from anywhere. In Terminal, run (adjust the path to where you put the repo):
+The repo includes a small launcher script at `bin/tweave`. You just need to make it reachable from anywhere. In Terminal, run (adjust the path to where you put the repo):
 
 ```sh
-chmod +x ~/QMDTemplate/rbuild
-sudo ln -s ~/QMDTemplate/rbuild /usr/local/bin/rbuild
+chmod +x ~/tweave/bin/tweave
+sudo ln -s ~/tweave/bin/tweave /usr/local/bin/tweave
 ```
 
 Line one marks the script as executable; line two creates a link to it in a folder your terminal already searches for commands (`sudo` will ask for your login password — typing it shows nothing on screen, that's normal, just type it and hit Enter).
 
-**Check it worked:** run `rbuild` from any folder. An R error about a missing input file = success.
+**Check it worked:** run `tweave` from any folder. An R error about a missing input file = success.
 
 ---
 
@@ -177,8 +177,8 @@ Line one marks the script as executable; line two creates a link to it in a fold
 Create a file ending in `.typ` (in VS Code, RStudio, or even Notepad) that starts like this:
 
 ````typst
-#import "@local/rsetup:0.1.0": *
-#show: qmdtemplate.with(
+#import "@local/tweave:0.1.0": *
+#show: tweave.with(
   title: "STAT 251 Homework 4",
   author: "Your Name",
 )
@@ -202,7 +202,7 @@ In your terminal, navigate to the folder containing your document, then build:
 
 ```powershell
 cd C:\Users\YourName\Documents\stat251
-rbuild homework4.typ
+tweave homework4.typ
 ```
 
 (`cd` means "change directory" — it moves your terminal into that folder. In VS Code you can skip this: open your folder in VS Code, then **Terminal → New Terminal** opens a terminal already in the right place.)
@@ -232,13 +232,13 @@ Inline numbers round to 4 digits by default; put `digits <- 2` in any chunk to c
 **`typst : The term 'typst' is not recognized...`**
 Typst isn't installed, or your terminal was open when you installed it. Close and reopen the terminal first. If it persists, reinstall via `winget install --id Typst.Typst`.
 
-**`rbuild : The term 'rbuild' is not recognized...`**
+**`tweave : The term 'tweave' is not recognized...`**
 The profile function didn't load. Restart PowerShell. If it still fails, run `notepad $PROFILE` and confirm your function is actually saved there, and check for the execution-policy error described in Step 3.
 
 **Red error mentioning `Rscript.exe` not found**
-The path in your `rbuild` function doesn't match your installed R version (R updates change the folder name, e.g. `R-4.5.2` → `R-4.6.0`). Re-run the `Get-ChildItem` search from Step 3 and update the path in `notepad $PROFILE`.
+The path in your `tweave` function doesn't match your installed R version (R updates change the folder name, e.g. `R-4.5.2` → `R-4.6.0`). Re-run the `Get-ChildItem` search from Step 3 and update the path in `notepad $PROFILE`.
 
-**`error: package not found ... @local/rsetup:0.1.0`**
+**`error: package not found ... @local/tweave:0.1.0`**
 The Typst package isn't where Typst expects. Re-check Step 2 — the most common mistake is a missing `0.1.0` folder level or a typo'd folder name.
 
 **`there is no package called 'knitr'`**
@@ -252,11 +252,19 @@ Make sure you build from the folder containing your `.typ` file (figures are sav
 ## Repository layout
 
 ```
-rsetup/0.1.0/      the Typst package (template + shorthands)
+tweave/0.1.0/      the Typst package (template + shorthands)
 build.R            knit + compile driver
 qmdhooks.r         knitr → Typst output hooks
-rbuild             bash launcher (macOS/Linux)
+bin/tweave         launcher script (macOS/Linux)
 examples/          worked example with rendered PDF
+```
+
+## Why "tweave"?
+
+[Sweave](https://en.wikipedia.org/wiki/Sweave) was the original literate-programming tool for statistics — S (the language R grew out of) + *weave*, running code inside LaTeX documents. knitr carried the wordplay forward (knit + R). tweave is the same idea with Typst taking LaTeX's chair: **T**ypst + **weave**. It also works as a verb, the way `knit` does:
+
+```sh
+tweave homework4.typ
 ```
 
 ## License

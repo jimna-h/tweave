@@ -1,5 +1,5 @@
-#import "@local/rsetup:0.1.0": *
-#show: qmdtemplate.with(
+#import "@local/tweave:0.1.0": *
+#show: tweave.with(
   title: "Simply an Example",
   author: "James Bruce",
 )
@@ -40,8 +40,7 @@ plot(x, y,
 #nextquestion() //2
 #questionbox[What are ease of life additions to this package you have made?]
 
-These can all be seen in QMDTemplate/rsetup/0.1.0
-/rsetup.typ : 
+These can all be seen in tweave/tweave/0.1.0/tweave.typ : 
 
 === Easy iid
 

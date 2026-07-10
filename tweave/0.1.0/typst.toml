@@ -1,0 +1,7 @@
+[package]
+name = "tweave"
+version = "0.1.0"
+entrypoint = "tweave.typ"
+authors = ["James Bruce"]
+license = "MIT"
+description = "Knit R code into Typst documents — a Quarto alternative for statistics homework"

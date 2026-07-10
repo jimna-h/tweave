@@ -13,7 +13,7 @@ get_script_dir <- function() {
     return(dirname(normalizePath(sub("^--file=", "", file_arg[1]))))
   }
   # Fallback: allow an env var override, else assume current directory
-  env <- Sys.getenv("QMDTEMPLATE_HOME", unset = "")
+  env <- Sys.getenv("TWEAVE_HOME", unset = "")
   if (nzchar(env)) return(env)
   getwd()
 }
