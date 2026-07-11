@@ -1,0 +1,4 @@
+#!/bin/sh
+# tweave CLI shim -- all logic lives in the installed R package,
+# so this file is safe to copy or symlink anywhere.
+exec Rscript -e 'tweave::main()' "$@"
