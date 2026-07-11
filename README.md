@@ -28,7 +28,7 @@ yourfile.typ  ──knitr──▶  yourfile.knit.typ  ──typst──▶  you
 
 The setup takes about 15 minutes and you only ever do it once. If you get stuck at any step, the [Troubleshooting](#troubleshooting) section at the bottom covers the most common problems.
 
-> **Planning to use VS Code?** Do this setup guide first — it's required either way — then see [the VS Code section](#optional-a-nicer-setup-with-vs-code) further down for extensions, one-keystroke builds, and a starter snippet.
+> **Planning to use VS Code?** See [the VS Code section](#optional-a-nicer-setup-with-vs-code) further down for extensions, one-keystroke builds, and a starter snippet.
 
 ### A note on "the terminal"
 
@@ -52,7 +52,7 @@ You need two programs installed before anything else:
 
    On macOS with [Homebrew](https://brew.sh): `brew install typst`. Or download it manually from the [Typst releases page](https://github.com/typst/typst/releases).
 
-Then install the **knitr** package inside R: open R (or RStudio), and in the console type:
+Then install the **knitr** package inside R: open R (or RStudio, or VS code if you've installed the R extension), and in the console type:
 
 ```r
 install.packages("knitr")
