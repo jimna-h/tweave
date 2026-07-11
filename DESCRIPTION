@@ -1,0 +1,23 @@
+Package: tweave
+Title: Knit R Code into Typst Documents
+Version: 0.2.0
+Authors@R:
+    person("James", "Bruce", email = "CHANGE-ME@example.com", role = c("aut", "cre"))
+Description: Weaves R code chunks embedded in Typst ('.typ') documents and
+    compiles the result to PDF, in the tradition of 'Sweave' and 'knitr'.
+    Ships a companion Typst package with a homework template, auto-numbered
+    questions, and statistics-flavored math shorthands.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Imports:
+    knitr,
+    tools,
+    utils
+Suggests:
+    testthat (>= 3.0.0),
+    withr
+Config/testthat/edition: 3
+SystemRequirements: Typst CLI (https://typst.app/)
+URL: https://github.com/jimna-h/tweave
+BugReports: https://github.com/jimna-h/tweave/issues
+RoxygenNote: 7.3.1
