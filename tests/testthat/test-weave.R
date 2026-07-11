@@ -35,3 +35,14 @@ test_that("digits set in a chunk controls inline rounding", {
   knitted <- readLines(file.path(tmp, "digits.knit.typ"))
   expect_true(any(grepl("Value: 3.14.", knitted, fixed = TRUE)))
 })
+
+test_that("weave handles paths containing spaces", {
+  skip_if(Sys.which("typst") == "", "Typst CLI not available")
+  tmp <- withr::local_tempdir()
+  spacey <- file.path(tmp, "My Drive", "STAT 251")
+  dir.create(spacey, recursive = TRUE)
+  input <- file.path(spacey, "hw.typ")
+  file.copy(test_path("fixtures", "minimal.typ"), input)
+  pdf <- weave(input, quiet = TRUE)
+  expect_true(file.exists(pdf))
+})

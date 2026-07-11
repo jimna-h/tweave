@@ -46,7 +46,9 @@ weave <- function(input, output = NULL, quiet = FALSE) {
 
   knitr::knit(input, output = output, quiet = quiet)
 
-  status <- system2("typst", c("compile", "--root", doc_dir, output))
+  # NB: system2() does not quote arguments; paths may contain spaces
+  status <- system2("typst",
+                    c("compile", "--root", shQuote(doc_dir), shQuote(output)))
   if (status != 0) {
     stop("typst compile failed (see message above).", call. = FALSE)
   }
