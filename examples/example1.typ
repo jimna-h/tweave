@@ -1,91 +1,143 @@
 #import "@local/tweave:0.1.0": *
 #show: tweave.with(
-  title: "Simply an Example",
+  title: "STAT 251 — Homework 4",
   author: "James Bruce",
 )
 
 ```{r}
-# Global Setup
-set.seed(123) # for reproducibility
+# Global setup
+set.seed(123)   # for reproducibility
+digits <- 3     # inline values round to 3 digits
 ```
 
-#nextquestion() //1
-#questionbox[Let's say a boy took a typing test several times to see his wpm typing speed. His results were as follows: 32, 38, 40, 34, 37, 29]
+#nextquestion() // Question 1
+#questionbox[
+  The built-in `faithful` dataset records 272 eruptions of the Old
+  Faithful geyser: the duration of each eruption and the waiting time until
+  the next one (both in minutes).
+]
 
-#subquestion() //a
-#questionbox[What was the boy's average typing speed?]
+#subquestion() // 1a
+#questionbox[Report the mean and standard deviation of the waiting times.]
 
 ```{r}
-y <- c(32, 38, 40, 34, 37, 29)
-avg_type_speed <- mean(y)
+wait <- faithful$waiting
+n <- length(wait)
 ```
 
-The boy's average typing speed is `r avg_type_speed` wpm.
+Across the `r n` recorded eruptions, the mean waiting time is
+`r mean(wait)` minutes with a standard deviation of `r sd(wait)` minutes.
 
-#subquestion() //b
-#questionbox[Suppose those tests were done at ages 7, 9, 10, 10, 12, 12. Create a plot showing the boy's typing speed against his age.]
+#subquestion() // 1b
+#questionbox[Plot a histogram of the waiting times. What do you notice?]
 
 ```{r}
-x <- c(7, 9, 10, 10, 12, 12)
-
-plot(x, y, 
-     main = "Boy's Typing Speed vs. Age",
-     xlab = "Age (years)", 
-     ylab = "Typing Speed (wpm)",
-     pch = 19, 
-     col = "blue")
-
+hist(wait,
+     breaks = 20,
+     main = "Waiting Time Between Eruptions",
+     xlab = "Minutes",
+     col = "steelblue")
 ```
 
-#nextquestion() //2
-#questionbox[What are ease of life additions to this package you have made?]
+The distribution is clearly _bimodal_: eruptions cluster around short
+(about 55 min) and long (about 80 min) waits, so the mean alone is a poor
+summary of a "typical" wait.
 
-These can all be seen in tweave/tweave/0.1.0/tweave.typ : 
-
-=== Easy iid
-
-In a math block, you can simply type "iid" and it will appear as: $iid$
-
-=== Easy gap
-
-Quickly create a gap of this size:
-#gap
-by typing "\#gap"
-
-=== Easy derivative
-
-This is mostly a solution to my own lazy problem, but for those variables that I most often use in derivatives (x, y, z, u, v, w, $theta$) can be written in math chunks as "dx" rather then "d x".
-
-=== Easy line
-
-This does remove customization features, but one can now create a quick line simply with "\#hline" (named so it doesn't shadow Typst's built-in `line()`):
 #hline
 
-=== Bar(x)
-
-Another one that overwrites base Typst, writing "bar(x)" in a math chunk will now produce $bar(x)$ rather than $|x$
-
-=== Choose
-
-In a math chunk, $choose(x, y)$ can still be written as "binom(x, y)", but can now also be written with "choose(x, y)"
-
-=== Question Handling
-
-"\#nextquestion()" --- will go from question 1, question 2, and so on
-
-"\#subquestion()" --- will go from 1a, 1b, and so on
-
-"\#questionbox[]" --- a blue box to easily distinguish questions from the author's responses --- can contain code chunks and formulas:
-
+#nextquestion() // Question 2
 #questionbox[
-Code chunk:
+  Suppose 65% of eruptions are "long" (waiting time above 68 minutes). If a
+  visitor watches 8 independent eruptions, what is the probability that
+  exactly 6 of them are long?
+]
+
+Let $X$ be the number of long eruptions. Then $X ~ "Binomial"(8, 0.65)$, so
+
+$
+  P(X = 6) = choose(8, 6) (0.65)^6 (0.35)^2
+$ <binom>
+
 ```{r}
-y <- c(1, 2, 3, 4, 5)
-avg <- mean(y)
+p6 <- dbinom(6, size = 8, prob = 0.65)
 ```
 
-Formula:
-$
-  X iid "Normal"(mu, sigma^2)
-$
+Evaluating @binom gives $P(X = 6) = `r p6`$.
+
+#hline
+
+#nextquestion() // Question 3
+#questionbox[
+  Construct a 95% confidence interval for the true mean waiting time.
 ]
+
+With $n = `r n`$ observations, the interval is
+
+$
+  bar(x) plus.minus t^*_(n-1) s / sqrt(n)
+$
+
+```{r, results='hide'}
+ci <- t.test(wait)$conf.int   # results='hide': compute now, report inline
+```
+
+which evaluates to (`r ci[1]`, `r ci[2]`) minutes. We are 95% confident the
+true mean waiting time lies in this interval — though given the bimodality
+from Question 1b, the _mean_ wait is not a wait any visitor is likely to
+experience.
+
+#hline
+
+#nextquestion() // Question 4
+#questionbox[
+  Fit the simple linear regression of waiting time on eruption duration.
+  State the model, report the fitted slope, and assess its significance.
+]
+
+The model is
+
+$
+  Y_i = beta_0 + beta_1 x_i + epsilon_i, quad epsilon_i iid "Normal"(0, sigma^2)
+$
+
+where $Y_i$ is the waiting time and $x_i$ the duration of eruption $i$.
+
+```{r}
+fit <- lm(waiting ~ eruptions, data = faithful)
+slope <- coef(fit)[2]
+pval <- summary(fit)$coefficients[2, 4]
+
+plot(faithful$eruptions, faithful$waiting,
+     main = "Waiting Time vs. Eruption Duration",
+     xlab = "Eruption duration (min)",
+     ylab = "Waiting time (min)",
+     pch = 19, col = "steelblue")
+abline(fit, lwd = 2)
+```
+
+Each additional minute of eruption predicts a `r slope`-minute longer wait.
+The slope is overwhelmingly significant ($p = `r pval`$ — tiny inline values
+are rendered automatically in scientific notation), which matches the strong
+linear trend visible in the plot.
+
+#gap
+
+= Appendix: tweave shorthand cheat sheet
+
+All of these come from the `tweave` Typst package and work in any math block:
+
+#table(
+  columns: (auto, auto, auto),
+  align: (left, center, left),
+  table.header([*Write*], [*Get*], [*Meaning*]),
+  [`X iid "Normal"(mu, sigma^2)`], [$X iid "Normal"(mu, sigma^2)$],
+    [i.i.d. distribution statement],
+  [`bar(x)`], [$bar(x)$], [sample mean (overline, not `|x`)],
+  [`choose(n, k)`], [$choose(n, k)$], [binomial coefficient (alias of `binom`)],
+  [`integral x f(x) dx`], [$integral x f(x) dx$],
+    [`dx`, `dy`, `dz`, `du`, `dv`, `dw`, `dtheta` render as differentials],
+)
+
+And outside math: `#nextquestion()` / `#subquestion()` for auto-numbered
+questions, `#questionbox[...]` for prompts, `#hline` for a quick rule, and
+`#gap` for half an inch of vertical space (used just above this appendix).

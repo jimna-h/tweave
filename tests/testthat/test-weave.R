@@ -22,3 +22,16 @@ test_that("weave refuses an empty input file", {
   file.create(empty)
   expect_error(weave(empty), "empty")
 })
+
+test_that("digits set in a chunk controls inline rounding", {
+  skip_if(Sys.which("typst") == "", "Typst CLI not available")
+  tmp <- withr::local_tempdir()
+  input <- file.path(tmp, "digits.typ")
+  writeLines(c(
+    "```{r}", "digits <- 2", "x <- 3.14159", "```",
+    "Value: `r x`."
+  ), input)
+  weave(input, quiet = TRUE)
+  knitted <- readLines(file.path(tmp, "digits.knit.typ"))
+  expect_true(any(grepl("Value: 3.14.", knitted, fixed = TRUE)))
+})

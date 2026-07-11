@@ -25,6 +25,12 @@ install <- function(bin_dir = NULL) {
       "  other:    https://github.com/typst/typst/releases"
     )
   }
+
+  message(
+    "\nDone! To check the setup, open a NEW terminal ",
+    "(PowerShell or Terminal -- not this R console) and run:\n",
+    "  tweave --version"
+  )
   invisible(TRUE)
 }
 

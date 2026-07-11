@@ -57,13 +57,13 @@ What they do: line 1 installs a helper for installing packages from GitHub; line
 
 **Read what `tweave::install()` prints.** On most machines it finishes silently and you're done. If the folder it installed to isn't on your PATH yet, it prints one manual step — exact folder, exact clicks — and you do that once. ("PATH" is the list of folders your terminal searches when you type a command.)
 
-**Check it worked:** open a **new** terminal and run:
+**Check it worked:** open a **new terminal window** — PowerShell on Windows, Terminal on macOS — **not the R console** — and run:
 
 ```
 tweave --version
 ```
 
-If it prints a version, everything is wired up.
+If it prints a version, everything is wired up. (Typing `tweave --version` into R itself gives `Error: object 'tweave' not found` — that's R telling you it's a terminal command, not an R command.)
 
 ### Updating later
 
@@ -245,6 +245,9 @@ Use the preview for checking **layout, math, and prose**, and use `tweave` / **C
 ---
 
 ## Troubleshooting
+
+**`Error: object 'tweave' not found`**
+You typed a terminal command into the R console. `tweave --version` and `tweave file.typ` go in PowerShell/Terminal; inside R, use `tweave::weave("file.typ")` and `packageVersion("tweave")` instead.
 
 **`tweave : The term 'tweave' is not recognized...`** (or `command not found`)
 The shim folder isn't on your PATH, or your terminal predates the install. Open a **new** terminal first. If it persists, re-run `tweave::install()` in R and follow the PATH instructions it prints, then open a new terminal again.

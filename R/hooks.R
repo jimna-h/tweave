@@ -61,12 +61,9 @@ tweave_hooks <- function() {
     },
 
     inline = function(x) {
-      # Users may set `digits` in the knit environment to change rounding
-      d <- if (exists("digits", envir = globalenv())) {
-        get("digits", envir = globalenv())
-      } else {
-        4
-      }
+      # Users may set `digits` in any chunk to change rounding
+      env <- knitr::knit_global()
+      d <- if (exists("digits", envir = env)) get("digits", envir = env) else 4
       format_inline(x, digits = d)
     }
   )
