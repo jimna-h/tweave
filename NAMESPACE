@@ -2,4 +2,5 @@
 
 export(install)
 export(main)
+export(uninstall)
 export(weave)

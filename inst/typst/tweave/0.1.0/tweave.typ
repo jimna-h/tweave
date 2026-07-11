@@ -1,4 +1,4 @@
-// tweave — R + Typst for statistics homework
+// tweave — R + Typst for statistics documents
 // Document template + stats-flavored shorthands
 
 #let tweave(
@@ -58,36 +58,6 @@
   body
 }
 
-// A tinted box to visually separate the assignment prompt from your answer
-#let questionbox(body) = {
-  block(
-    fill: rgb("#eef4ff").lighten(30%),
-    stroke: (left: 3pt + rgb("#2d5da1").lighten(25%)),
-    inset: (x: 12pt, y: 10pt),
-    width: 100%,
-    radius: 2pt,
-    [
-      #set text(style: "italic", weight: "medium")
-      #body
-    ]
-  )
-}
-
-// Auto-numbered question / subquestion headers
-#let question_counter = counter("question")
-#let subquestion_counter = counter("subquestion")
-
-#let nextquestion() = {
-  question_counter.step()
-  subquestion_counter.update(0)
-  context [= Question #question_counter.display()]
-}
-
-#let subquestion() = {
-  subquestion_counter.step()
-  context [== #question_counter.display()#subquestion_counter.display("a").]
-}
-
 // Math shorthands ------------------------------------------------------
 
 // binom(x, y) can also be written choose(x, y)
@@ -95,10 +65,6 @@
 
 // bar(x) renders as overline(x) (sample mean) instead of |x
 #let bar = math.overline
-
-// Quick horizontal rule. Named hline so it doesn't shadow Typst's
-// built-in line() function.
-#let hline = line(length: 100%, stroke: 0.5pt)
 
 // Differentials: dx instead of "d" x in math mode
 #let dx = $"d"x$
@@ -108,9 +74,6 @@
 #let dv = $"d"v$
 #let dw = $"d"w$
 #let dtheta = $"d"theta$
-
-// Quick vertical gap
-#let gap = v(0.5in)
 
 // X iid Normal(mu, sigma^2)
 #let iid = $limits(tilde)^"iid"$

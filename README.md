@@ -6,11 +6,11 @@ tweave knits R code chunks embedded in a `.typ` file, then compiles the result s
 
 It ships with a stats-homework-focused Typst package (also called `tweave`) that provides:
 
-- **Auto-numbered questions** — `#nextquestion()` and `#subquestion()` produce `Question 1`, `1a.`, `1b.`, … with no manual bookkeeping
-- **`#questionbox[...]`** — a tinted callout that visually separates the assignment prompt from your answer (works with code chunks and math inside)
 - **Math shorthands** — `iid` (∼ with "iid" above it), `bar(x)` for sample means, `choose(x, y)` for binomial coefficients, and differentials `dx`, `dy`, `dtheta`, …
 - **Inline R values** — `` `r mean(y)` `` in your prose, auto-rounded (set `digits` in R to control precision) with scientific notation rendered as proper Typst math
 - **Sensible defaults** — styled code/output blocks, numbered equations, auto-linked URLs, a title block
+
+tweave deliberately does *not* impose homework structure (question numbering, prompt boxes, point tallies). It composes with any of the homework templates on [Typst Universe](https://typst.app/universe/) — grape-suite, tinyset, adaptable-pset, and others — or with a few `#let` definitions of your own (the example shows this pattern).
 
 See [`examples/example1.typ`](examples/example1.typ) and its [rendered PDF](examples/example1.knit.pdf).
 
@@ -93,8 +93,8 @@ Create a file ending in `.typ` (in VS Code, RStudio, or even Notepad) that start
   author: "Your Name",
 )
 
-#nextquestion()
-#questionbox[Compute the sample mean of 32, 38, 40, 34, 37, 29.]
+= Question 1
+_Compute the sample mean of 32, 38, 40, 34, 37, 29._
 
 ```{r}
 y <- c(32, 38, 40, 34, 37, 29)
@@ -234,7 +234,7 @@ Every homework file starts with the same six lines of boilerplate. VS Code *snip
    }
    ```
 
-4. Save. Now in any `.typ` file, type `tweave` and press **Tab**: the whole header appears, your cursor lands on the title, **Tab** jumps to the author, and a final **Tab** drops you below the setup chunk, ready to write `#nextquestion()`.
+4. Save. Now in any `.typ` file, type `tweave` and press **Tab**: the whole header appears, your cursor lands on the title, **Tab** jumps to the author, and a final **Tab** drops you below the setup chunk, ready to write your first question.
 
 ### One important gotcha: the live preview doesn't run R
 
@@ -268,6 +268,17 @@ Check your internet connection and that you typed the repo name exactly: `jimna-
 Don't delete the `figure/` folder between knitting and compiling — plots are stored there and referenced by the PDF build.
 
 ---
+
+## Uninstalling
+
+In R, two commands:
+
+```r
+tweave::uninstall()          # removes the Typst template package and the tweave command
+remove.packages("tweave")    # removes the R package itself
+```
+
+(In that order — `uninstall()` needs the package still installed to run.) If you added a folder to your PATH during setup on Windows, the leftover entry is harmless, but `uninstall()` prints where to remove it if you want a fully clean exit.
 
 ## For developers
 

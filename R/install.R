@@ -36,18 +36,24 @@ install <- function(bin_dir = NULL) {
 
 # -- Typst package -------------------------------------------------------
 
-install_typst_package <- function() {
-  src <- system.file("typst", "tweave", package = "tweave")
-  if (src == "") stop("Bundled Typst package not found; reinstall tweave.",
-                      call. = FALSE)
+bundled_typst_packages <- function() {
+  root <- system.file("typst", package = "tweave")
+  if (root == "") stop("Bundled Typst packages not found; reinstall tweave.",
+                       call. = FALSE)
+  list.files(root)  # e.g. "tweave", "pretty-questions"
+}
 
-  dest <- file.path(typst_local_packages_dir(), "tweave")
-  dir.create(dest, recursive = TRUE, showWarnings = FALSE)
-  ok <- file.copy(list.files(src, full.names = TRUE), dest,
-                  recursive = TRUE, overwrite = TRUE)
-  if (!all(ok)) stop("Could not copy the Typst package to ", dest,
-                     call. = FALSE)
-  message("Typst package installed: ", dest)
+install_typst_package <- function() {
+  root <- system.file("typst", package = "tweave")
+  for (pkg in bundled_typst_packages()) {
+    dest <- file.path(typst_local_packages_dir(), pkg)
+    dir.create(dest, recursive = TRUE, showWarnings = FALSE)
+    ok <- file.copy(list.files(file.path(root, pkg), full.names = TRUE), dest,
+                    recursive = TRUE, overwrite = TRUE)
+    if (!all(ok)) stop("Could not copy the Typst package to ", dest,
+                       call. = FALSE)
+    message("Typst package installed: ", dest)
+  }
 }
 
 # Platform-correct location of Typst's @local packages.
@@ -113,4 +119,62 @@ dir_on_path <- function(dir) {
   path <- strsplit(Sys.getenv("PATH"), .Platform$path.sep)[[1]]
   normalizePath(dir, mustWork = FALSE) %in%
     vapply(path, normalizePath, character(1), mustWork = FALSE)
+}
+
+# -- Uninstall -----------------------------------------------------------
+
+#' Remove everything tweave::install() set up
+#'
+#' Deletes the Typst template package and the CLI shim. Run this *before*
+#' removing the R package itself with `remove.packages("tweave")`.
+#'
+#' @param bin_dir Where the CLI shim was placed, if you overrode the
+#'   default in [install()].
+#' @export
+uninstall <- function(bin_dir = NULL) {
+  removed <- FALSE
+
+  # 1. Bundled Typst packages (tweave + pretty-questions)
+  for (pkg in bundled_typst_packages()) {
+    typst_pkg <- file.path(typst_local_packages_dir(), pkg)
+    if (dir.exists(typst_pkg)) {
+      unlink(typst_pkg, recursive = TRUE)
+      message("Removed Typst package: ", typst_pkg)
+      removed <- TRUE
+    }
+  }
+
+  # 2. CLI shim
+  windows <- .Platform$OS.type == "windows"
+  if (is.null(bin_dir)) {
+    bin_dir <- if (windows) {
+      file.path(Sys.getenv("LOCALAPPDATA"), "tweave", "bin")
+    } else {
+      path.expand("~/.local/bin")
+    }
+  }
+  shim <- file.path(bin_dir, if (windows) "tweave.cmd" else "tweave")
+  if (file.exists(shim)) {
+    unlink(shim)
+    message("Removed CLI: ", shim)
+    removed <- TRUE
+  }
+  # On Windows the shim lives in its own folder; remove it if now empty
+  if (windows && dir.exists(bin_dir) &&
+      length(list.files(bin_dir, all.files = TRUE, no.. = TRUE)) == 0) {
+    unlink(bin_dir, recursive = TRUE)
+  }
+
+  if (!removed) message("Nothing to remove; tweave::install() files not found.")
+
+  message(
+    "\nTo finish, remove the R package itself:\n",
+    '  remove.packages("tweave")',
+    if (windows) paste0(
+      "\nIf you added a tweave folder to your PATH during setup, you can ",
+      "delete that entry\n(Start -> \"environment variables\" -> Path) -- ",
+      "it is harmless either way."
+    ) else ""
+  )
+  invisible(TRUE)
 }

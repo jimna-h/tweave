@@ -4,6 +4,13 @@
   author: "James Bruce",
 )
 
+// A little local convenience for prompts — define your own, or pair tweave
+// with any homework template from Typst Universe (grape-suite, tinyset, ...)
+#let prompt(body) = block(
+  fill: luma(246), stroke: (left: 3pt + luma(180)),
+  inset: (x: 12pt, y: 10pt), width: 100%,
+)[#emph(body)]
+
 #block(
   fill: luma(240),
   inset: 8pt,
@@ -14,15 +21,15 @@ set.seed(123)   # for reproducibility
 digits <- 3     # inline values round to 3 digits", lang: "r")
 )
 
-#nextquestion() // Question 1
-#questionbox[
+= Question 1
+#prompt[
   The built-in `faithful` dataset records 272 eruptions of the Old
   Faithful geyser: the duration of each eruption and the waiting time until
   the next one (both in minutes).
 ]
 
-#subquestion() // 1a
-#questionbox[Report the mean and standard deviation of the waiting times.]
+== (a)
+#prompt[Report the mean and standard deviation of the waiting times.]
 
 #block(
   fill: luma(240),
@@ -36,8 +43,8 @@ n <- length(wait)", lang: "r")
 Across the 272 recorded eruptions, the mean waiting time is
 70.897 minutes with a standard deviation of 13.595 minutes.
 
-#subquestion() // 1b
-#questionbox[Plot a histogram of the waiting times. What do you notice?]
+== (b)
+#prompt[Plot a histogram of the waiting times. What do you notice?]
 
 #block(
   fill: luma(240),
@@ -55,10 +62,10 @@ The distribution is clearly _bimodal_: eruptions cluster around short
 (about 55 min) and long (about 80 min) waits, so the mean alone is a poor
 summary of a "typical" wait.
 
-#hline
+#line(length: 100%, stroke: 0.5pt)
 
-#nextquestion() // Question 2
-#questionbox[
+= Question 2
+#prompt[
   Suppose 65% of eruptions are "long" (waiting time above 68 minutes). If a
   visitor watches 8 independent eruptions, what is the probability that
   exactly 6 of them are long?
@@ -80,10 +87,10 @@ $ <binom>
 
 Evaluating @binom gives $P(X = 6) = 0.259$.
 
-#hline
+#line(length: 100%, stroke: 0.5pt)
 
-#nextquestion() // Question 3
-#questionbox[
+= Question 3
+#prompt[
   Construct a 95% confidence interval for the true mean waiting time.
 ]
 
@@ -106,10 +113,10 @@ true mean waiting time lies in this interval — though given the bimodality
 from Question 1b, the _mean_ wait is not a wait any visitor is likely to
 experience.
 
-#hline
+#line(length: 100%, stroke: 0.5pt)
 
-#nextquestion() // Question 4
-#questionbox[
+= Question 4
+#prompt[
   Fit the simple linear regression of waiting time on eruption duration.
   State the model, report the fitted slope, and assess its significance.
 ]
@@ -144,7 +151,7 @@ The slope is overwhelmingly significant ($p = 8.13 times 10^(-100)$ — tiny inl
 are rendered automatically in scientific notation), which matches the strong
 linear trend visible in the plot.
 
-#gap
+#v(0.5in)
 
 = Appendix: tweave shorthand cheat sheet
 
@@ -162,6 +169,6 @@ All of these come from the `tweave` Typst package and work in any math block:
     [`dx`, `dy`, `dz`, `du`, `dv`, `dw`, `dtheta` render as differentials],
 )
 
-And outside math: `#nextquestion()` / `#subquestion()` for auto-numbered
-questions, `#questionbox[...]` for prompts, `#hline` for a quick rule, and
-`#gap` for half an inch of vertical space (used just above this appendix).
+For question numbering, prompt boxes, and other homework structure, tweave
+composes with anything: a homework template from Typst Universe, or a few
+`#let` definitions of your own (like `prompt` at the top of this file).
