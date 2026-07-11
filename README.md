@@ -192,6 +192,7 @@ VS Code can run your build when you press **Ctrl + Shift + B**, using a small co
 
 A few notes:
 
+- **The task builds what's on your screen, not the last save.** VS Code saves all unsaved files before running a task (the `task.saveBeforeRun` setting, on by default) — so **Ctrl + Shift + B** always sees your latest edits. Building from the terminal doesn't do this: a manually typed `tweave file.typ` reads whatever was last *saved*, and an unsaved file can even be empty on disk (tweave will refuse it with a "did you save?" error). If you prefer terminal builds, consider turning on **File → Auto Save**.
 - **It runs on whatever file is focused**, so pressing it with (say) a `.R` file open will just produce a knitr error — harmless, but if you'd rather be asked which task to run each time, change `"isDefault": true` to `false` and **Ctrl + Shift + B** will show a picker instead. (Tasks can't be automatically restricted to `.typ` files — VS Code doesn't scope tasks by file type.)
 - **Per-project alternative:** if you ever want a task only for one folder (e.g., a shared repo), put the same JSON in a file at `.vscode/tasks.json` inside that folder. Folder tasks and your global task will both appear in the picker.
 

@@ -16,3 +16,9 @@ test_that("weave knits and compiles end to end", {
 test_that("weave fails clearly on a missing file", {
   expect_error(weave("no-such-file.typ"), "not found")
 })
+
+test_that("weave refuses an empty input file", {
+  empty <- withr::local_tempfile(fileext = ".typ")
+  file.create(empty)
+  expect_error(weave(empty), "empty")
+})

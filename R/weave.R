@@ -15,6 +15,11 @@ weave <- function(input, output = NULL, quiet = FALSE) {
   if (!file.exists(input)) {
     stop("Input file not found: ", input, call. = FALSE)
   }
+  if (file.size(input) == 0) {
+    stop("Input file is empty: ", input,
+         "\n  (If you just wrote it in an editor, did you save?)",
+         call. = FALSE)
+  }
   check_typst()
 
   input <- normalizePath(input)
