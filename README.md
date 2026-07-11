@@ -26,7 +26,7 @@ The `tweave` command runs your document through **knitr** (executing the R chunk
 
 ## Installation
 
-Setup takes about 15 minutes. If anything goes wrong, see [Troubleshooting](#troubleshooting).
+Setup takes about 10 minutes. If anything goes wrong, see [Troubleshooting](#troubleshooting).
 
 **This guide assumes you work in [VS Code](https://code.visualstudio.com/)** — it's free, and it gives you Typst syntax highlighting, a live preview, an R console, and one-keystroke builds, so everything from install to daily writing happens in one window. tweave itself doesn't care what editor you use, though; if you prefer something else, do Steps 2–3 from any terminal and see [Not using VS Code?](#not-using-vs-code).
 
