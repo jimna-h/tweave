@@ -28,6 +28,8 @@ yourfile.typ  ──knitr──▶  yourfile.knit.typ  ──typst──▶  you
 
 The setup takes about 15 minutes and you only ever do it once. If you get stuck at any step, the [Troubleshooting](#troubleshooting) section at the bottom covers the most common problems.
 
+> **Planning to use VS Code?** Do this setup guide first — it's required either way — then see [the VS Code section](#optional-a-nicer-setup-with-vs-code) further down for extensions, one-keystroke builds, and a starter snippet.
+
 ### A note on "the terminal"
 
 Several steps below happen in a *terminal* — a window where you type commands instead of clicking buttons.
@@ -133,6 +135,14 @@ PowerShell has a *profile* — a script file it runs automatically every time it
 
    If Notepad asks *"Do you want to create a new file?"* — say **Yes**. That just means you've never had a profile before, which is normal.
 
+   > **If Notepad shows an error instead, or your changes won't save:** the *folder* the profile lives in probably doesn't exist yet, and Notepad can't create folders. Create the file properly first:
+   >
+   > ```powershell
+   > New-Item -Path $PROFILE -Type File -Force
+   > ```
+   >
+   > (this creates the file *and* any missing folders along the way), then run `notepad $PROFILE` again.
+
 3. **Add the shortcut.** Paste this into Notepad, replacing both paths with *your* Rscript path from step 1 and the folder where *you* unzipped the repo:
 
    ```powershell
@@ -152,6 +162,14 @@ PowerShell has a *profile* — a script file it runs automatically every time it
    > ```
    >
    > answer `Y`, then restart PowerShell again. This allows scripts you wrote yourself while still blocking unsigned scripts from the internet.
+   >
+   > On some machines (especially school or work PCs with stricter defaults) that isn't enough. If the error persists, open PowerShell **as Administrator** (right-click it in the Start menu → *Run as administrator*) and run:
+   >
+   > ```powershell
+   > Set-ExecutionPolicy -Scope LocalMachine RemoteSigned -Force
+   > ```
+   >
+   > then restart PowerShell. If even that is blocked, your machine is centrally managed by Group Policy and you'll need IT's help.
 
 **Check it worked:** type `tweave` and hit Enter. If you see an R error about a missing file (rather than *"tweave is not recognized"*), the shortcut works — it just has no document to build yet.
 
@@ -251,10 +269,10 @@ tweave homework4.typ
 
 ### One-keystroke builds (optional but great)
 
-VS Code can run your build when you press **Ctrl + Shift + B**, using a small config file called a *task*.
+VS Code can run your build when you press **Ctrl + Shift + B**, using a small config called a *task*. You set this up **once, globally** — it then works in every folder you ever open, no per-project files needed.
 
-1. In your project folder, create a folder named `.vscode` (with the leading dot).
-2. Inside it, create a file named `tasks.json` containing:
+1. Press **Ctrl + Shift + P**, type **user tasks**, and choose **Tasks: Open User Tasks**. (If it asks for a task template, pick **Others**.) This opens your personal, global `tasks.json`.
+2. Replace the file's contents with:
 
    ```json
    {
@@ -274,7 +292,21 @@ VS Code can run your build when you press **Ctrl + Shift + B**, using a small co
 
    You don't need to understand this file — it just tells VS Code: "when asked to build, run `tweave` on whatever file is currently open, from that file's folder."
 
-3. Open your `.typ` file, press **Ctrl + Shift + B**, and watch the terminal knit and compile it. From now on, your edit-build-check loop is: make a change, **Ctrl + S**, **Ctrl + Shift + B**, look at the PDF.
+3. Save, then open your `.typ` file and press **Ctrl + Shift + B**: the terminal knits and compiles it. From now on, your edit-build-check loop is: make a change, **Ctrl + S**, **Ctrl + Shift + B**, look at the PDF.
+
+A few notes:
+
+- **It runs on whatever file is focused**, so pressing it with (say) a `.R` file open will just produce a knitr error — harmless, but if you'd rather be asked which task to run each time, change `"isDefault": true` to `false` and **Ctrl + Shift + B** will show a picker instead. (Tasks can't be automatically restricted to `.typ` files — VS Code doesn't scope tasks by file type.)
+- **Per-project alternative:** if you ever want a task only for one folder (e.g., a shared repo), put the same JSON in a file at `.vscode/tasks.json` inside that folder. Folder tasks and your global task will both appear in the picker.
+
+### Made a change and nothing happened?
+
+Two different "restarts" trip people up in VS Code:
+
+- **After installing an extension** or when settings/snippets/tasks don't seem to take effect: press **Ctrl + Shift + P** and run **Developer: Reload Window** (or just close and reopen VS Code).
+- **After editing your PowerShell profile** (the `tweave` function from Step 3): reloading the window isn't enough — the profile only loads when a *terminal* starts. Kill the old terminal (trash-can icon in the terminal panel) and open a new one.
+
+When in doubt, fully close and reopen VS Code — that resets both.
 
 ### A starter snippet (optional)
 
