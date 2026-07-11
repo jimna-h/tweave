@@ -19,3 +19,11 @@ test_that("source hook respects echo/include", {
   expect_equal(h$output("out", list(results = "hide")), "")
   expect_match(h$source("x <- 1", list()), 'raw\\("x <- 1", lang: "r"\\)')
 })
+
+test_that("results='asis' passes chunk output through as Typst markup", {
+  h <- tweave:::tweave_hooks()
+  out <- h$output("#table(columns: 2)", list(results = "asis"))
+  expect_equal(out, "#table(columns: 2)")
+  # default still wraps in a raw block
+  expect_match(h$output("plain", list(results = "markup")), "raw\\(")
+})

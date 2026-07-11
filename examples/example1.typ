@@ -59,7 +59,7 @@ summary of a "typical" wait.
   exactly 6 of them are long?
 ]
 
-Let $X$ be the number of long eruptions. Then $X ~ "Binomial"(8, 0.65)$, so
+Let $X$ be the number of long eruptions. Then $X ~ Binomial(8, 0.65)$, so
 
 $
   P(X = 6) = choose(8, 6) (0.65)^6 (0.35)^2
@@ -104,7 +104,7 @@ experience.
 The model is
 
 $
-  Y_i = beta_0 + beta_1 x_i + epsilon_i, quad epsilon_i iid "Normal"(0, sigma^2)
+  Y_i = beta_0 + beta_1 x_i + epsilon_i, quad epsilon_i iid Normal(0, sigma^2)
 $
 
 where $Y_i$ is the waiting time and $x_i$ the duration of eruption $i$.
@@ -137,8 +137,10 @@ All of these come from the `tweave` Typst package and work in any math block:
   columns: (auto, auto, auto),
   align: (left, center, left),
   table.header([*Write*], [*Get*], [*Meaning*]),
-  [`X iid "Normal"(mu, sigma^2)`], [$X iid "Normal"(mu, sigma^2)$],
-    [i.i.d. distribution statement],
+  [`X iid Normal(mu, sigma^2)`], [$X iid Normal(mu, sigma^2)$],
+    [i.i.d. statement; `Normal`, `Poisson`, `Binomial`, ... render upright],
+  [`H0: mu = 0`], [$H0: mu = 0$],
+    [hypotheses: `H0` and `HA` (any casing)],
   [`bar(x)`], [$bar(x)$], [sample mean (overline, not `|x`)],
   [`choose(n, k)`], [$choose(n, k)$], [binomial coefficient (alias of `binom`)],
   [`integral x f(x) dx`], [$integral x f(x) dx$],

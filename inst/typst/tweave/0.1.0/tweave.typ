@@ -66,14 +66,38 @@
 // bar(x) renders as overline(x) (sample mean) instead of |x
 #let bar = math.overline
 
-// Differentials: dx instead of "d" x in math mode
-#let dx = $"d"x$
-#let dy = $"d"y$
-#let dz = $"d"z$
-#let du = $"d"u$
-#let dv = $"d"v$
-#let dw = $"d"w$
-#let dtheta = $"d"theta$
+// Differentials, using Typst's built-in upright dif
+#let dx = $dif x$
+#let dy = $dif y$
+#let dz = $dif z$
+#let dt = $dif t$
+#let du = $dif u$
+#let dv = $dif v$
+#let dw = $dif w$
+#let dtheta = $dif theta$
+#let dphi = $dif phi$
+#let dlambda = $dif lambda$
+
+// Hypotheses
+#let H0 = $H_0$
+#let h0 = $H_0$
+#let HA = $H_A$
+#let Ha = $H_A$
+#let ha = $H_A$
+
+// Distribution names, rendered upright: $X ~ Normal(mu, sigma^2)$
+// NB: Gamma and Beta are deliberately NOT defined here -- they would
+// shadow Typst's Greek capitals, breaking the gamma function Γ(α) etc.
+// Define them yourself if you accept that tradeoff.
+#let Normal = math.op("Normal")
+#let Uniform = math.op("Uniform")
+#let Exponential = math.op("Exponential")
+#let Bernoulli = math.op("Bernoulli")
+#let Binomial = math.op("Binomial")
+#let Poisson = math.op("Poisson")
+#let StudentT = math.op("Student-t")
+#let ChiSquared = math.op("Chi-squared")
+#let FDist = math.op("F")
 
 // X iid Normal(mu, sigma^2)
 #let iid = $limits(tilde)^"iid"$

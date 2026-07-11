@@ -43,6 +43,8 @@ tweave_hooks <- function() {
           trimws(x) == "") {
         return("")
       }
+      # results='asis': the chunk emitted Typst markup; pass it through
+      if (identical(options$results, "asis")) return(x)
       sprintf(
         '#block(
   stroke: 0.5pt + luma(200),
