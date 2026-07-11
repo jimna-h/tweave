@@ -28,7 +28,7 @@ yourfile.typ  ──knitr──▶  yourfile.knit.typ  ──typst──▶  you
 
 The setup takes about 15 minutes and you only ever do it once. If you get stuck at any step, the [Troubleshooting](#troubleshooting) section at the bottom covers the most common problems.
 
-> **Planning to use VS Code?** See [the VS Code section](#optional-a-nicer-setup-with-vs-code) further down for extensions, one-keystroke builds, and a starter snippet.
+> **Planning to use VS Code? *(Highly Recommended)*** See [the VS Code section](#optional-a-nicer-setup-with-vs-code) further down for extensions, one-keystroke builds, and a starter snippet.
 
 ### A note on "the terminal"
 
