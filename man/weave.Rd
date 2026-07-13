@@ -4,15 +4,19 @@
 \alias{weave}
 \title{Weave an R-Typst document and compile it to PDF}
 \usage{
-weave(input, output = NULL, quiet = FALSE)
+weave(input, output = NULL, quiet = FALSE, keep = FALSE)
 }
 \arguments{
 \item{input}{Path to a `.typ` file containing R code chunks.}
 
 \item{output}{Path for the intermediate knitted file. Defaults to
-`<input>.knit.typ` next to the input.}
+`<input>.knit.typ` next to the input; removed after a successful
+compile unless `keep = TRUE` (always kept when compilation fails,
+since Typst's error messages point at its line numbers).}
 
 \item{quiet}{Suppress knitr progress output.}
+
+\item{keep}{Keep the intermediate `.knit.typ` after a successful build.}
 }
 \value{
 (Invisibly) the path to the compiled PDF.

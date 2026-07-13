@@ -1,6 +1,6 @@
 Package: tweave
 Title: Knit R Code into Typst Documents
-Version: 0.2.0
+Version: 0.3.0
 Authors@R:
     person("James", "Bruce", email = "CHANGE-ME@example.com", role = c("aut", "cre"))
 Description: Weaves R code chunks embedded in Typst ('.typ') documents and

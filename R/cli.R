@@ -13,9 +13,10 @@ main <- function(args = commandArgs(trailingOnly = TRUE)) {
       "tweave -- knit R code chunks in a Typst document and compile to PDF\n",
       "\n",
       "Usage:\n",
-      "  tweave <input.typ>     knit and compile\n",
-      "  tweave --version       print version\n",
-      "  tweave --help          show this help\n",
+      "  tweave <input.typ>          knit and compile to <input>.pdf\n",
+      "  tweave --keep <input.typ>   also keep the intermediate .knit.typ\n",
+      "  tweave --version            print version\n",
+      "  tweave --help               show this help\n",
       sep = ""
     )
     return(invisible(cli_exit(if (length(args) == 0) 1 else 0)))
@@ -26,9 +27,16 @@ main <- function(args = commandArgs(trailingOnly = TRUE)) {
     return(invisible(cli_exit(0)))
   }
 
+  keep <- "--keep" %in% args
+  args <- setdiff(args, "--keep")
+  if (length(args) == 0) {
+    message("Error: --keep requires an input file.")
+    return(invisible(cli_exit(1)))
+  }
+
   tryCatch(
     {
-      weave(args[[1]])
+      weave(args[[1]], keep = keep)
       invisible(cli_exit(0))
     },
     error = function(e) {

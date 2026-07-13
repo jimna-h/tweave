@@ -12,12 +12,14 @@ It ships with a stats-focused Typst package (also called `tweave`) that provides
 
 tweave deliberately does *not* impose document structure like question numbering, prompt boxes, or point tallies. It composes with any of the templates on [Typst Universe](https://typst.app/universe/) — grape-suite, tinyset, adaptable-pset, and others — or with a few `#let` definitions of your own (the example shows this pattern).
 
-Two examples: [`example1.typ`](examples/example1.typ) ([PDF](examples/example1.knit.pdf)) is a plain homework-style document — the Quarto-parity baseline. [`example2.typ`](examples/example2.typ) ([PDF](examples/example2.knit.pdf)) is the reason to switch: a styled report with a gradient title band, stat cards fed by inline R, running page headers, captioned cross-referenced figures, R-*generated* striped tables (`results='asis'`), a key-finding banner, footnotes, two-column text, and a one-line APA bibliography from a plain `.bib` file — each of which is a few lines of Typst rather than a LaTeX preamble battle.
+Two examples: [`example1.typ`](examples/example1.typ) ([PDF](examples/example1.pdf)) is a plain homework-style document — the Quarto-parity baseline. [`example2.typ`](examples/example2.typ) ([PDF](examples/example2.pdf)) is the reason to switch: a styled report with a gradient title band, stat cards fed by inline R, running page headers, captioned cross-referenced figures, R-*generated* striped tables (`results='asis'`), a key-finding banner, footnotes, two-column text, and a one-line APA bibliography from a plain `.bib` file — each of which is a few lines of Typst rather than a LaTeX preamble battle.
 
 ## How it works
 
 ```
-yourfile.typ  ──knitr──▶  yourfile.knit.typ  ──typst──▶  yourfile.knit.pdf
+yourfile.typ  ──knitr──▶  (yourfile.knit.typ)  ──typst──▶  yourfile.pdf
+                           removed after a
+                           successful build
 ```
 
 The `tweave` command runs your document through **knitr** (executing the R chunks and inserting their formatted results), then calls `typst compile` on the result. Under the hood, tweave is an R package — installing it pulls in everything R-side automatically.
@@ -26,7 +28,7 @@ The `tweave` command runs your document through **knitr** (executing the R chunk
 
 ## Installation
 
-Setup takes about 10 minutes. If anything goes wrong, see [Troubleshooting](#troubleshooting).
+Setup takes about 15 minutes. If anything goes wrong, see [Troubleshooting](#troubleshooting).
 
 **This guide assumes you work in [VS Code](https://code.visualstudio.com/)** — it's free, and it gives you Typst syntax highlighting, a live preview, an R console, and one-keystroke builds, so everything from install to daily writing happens in one window. tweave itself doesn't care what editor you use, though; if you prefer something else, do Steps 2–3 from any terminal and see [Not using VS Code?](#not-using-vs-code).
 
@@ -158,11 +160,10 @@ Press **Ctrl + Shift + B** (the build task from Step 4), or type `tweave analysi
 
 This produces:
 
-- `analysis.knit.typ` — the intermediate file with R results baked in (you can ignore it)
-- `analysis.knit.pdf` — **your finished PDF**
-- a `figure/analysis/` folder holding any plots
+- `analysis.pdf` — **your finished PDF**
+- a `figure/analysis/` folder holding any plots (safe to delete; it's regenerated every build)
 
-Rebuild after every edit; it takes a second or two.
+Rebuild after every edit; it takes a second or two. (An intermediate `analysis.knit.typ` exists briefly during the build and is removed on success; if compilation *fails*, it's kept so the error's line numbers have a file to point at. `tweave --keep analysis.typ` keeps it always, if you want to inspect what knitr produced.)
 
 **Prefer to stay inside RStudio?** The same build is available as an R function — no terminal needed:
 
@@ -205,7 +206,7 @@ Every tweave document starts with the same few lines of boilerplate. VS Code *sn
 
 Tinymist's preview button (top-right when a `.typ` file is open) compiles your document *directly*, skipping the R step — so R chunks show up as plain code blocks, inline `` `r ...` `` values appear as literal text, and plots are missing. This is normal, not a bug.
 
-Use the preview for checking **layout, math, and prose**, and use **Ctrl + Shift + B** whenever you need to see **actual R results**. If you want a live-ish view of the real output, run a build and open `yourfile.knit.pdf` in a VS Code tab — it refreshes each time you rebuild.
+Use the preview for checking **layout, math, and prose**, and use **Ctrl + Shift + B** whenever you need to see **actual R results**. If you want a live-ish view of the real output, run a build and open `yourfile.pdf` in a VS Code tab — it refreshes each time you rebuild.
 
 ### Chunk options
 
@@ -250,8 +251,8 @@ The Typst template package isn't installed. Run `tweave::install()` in R — it 
 **Errors during `remotes::install_github(...)`**
 Check your internet connection and that you typed the repo name exactly: `jimna-h/tweave`. Corporate/campus networks sometimes block GitHub; try another network.
 
-**Plots missing from the PDF**
-Don't delete the `figure/` folder between knitting and compiling — plots are stored there and referenced by the PDF build.
+**Compile error mentioning a `.knit.typ` file**
+That's the intermediate file tweave keeps around when compilation fails — the error's line numbers refer to it. Fix your `.typ` source (the intermediate mirrors it, plus R output) and rebuild; it's cleaned up automatically on the next success.
 
 ---
 

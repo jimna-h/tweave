@@ -7,11 +7,14 @@
 #'
 #' @param input Path to a `.typ` file containing R code chunks.
 #' @param output Path for the intermediate knitted file. Defaults to
-#'   `<input>.knit.typ` next to the input.
+#'   `<input>.knit.typ` next to the input; removed after a successful
+#'   compile unless `keep = TRUE` (always kept when compilation fails,
+#'   since Typst's error messages point at its line numbers).
 #' @param quiet Suppress knitr progress output.
+#' @param keep Keep the intermediate `.knit.typ` after a successful build.
 #' @return (Invisibly) the path to the compiled PDF.
 #' @export
-weave <- function(input, output = NULL, quiet = FALSE) {
+weave <- function(input, output = NULL, quiet = FALSE, keep = FALSE) {
   if (!file.exists(input)) {
     stop("Input file not found: ", input, call. = FALSE)
   }
@@ -46,14 +49,18 @@ weave <- function(input, output = NULL, quiet = FALSE) {
 
   knitr::knit(input, output = output, quiet = quiet)
 
+  # Compile straight to <input>.pdf (no ".knit" in the final name).
   # NB: system2() does not quote arguments; paths may contain spaces
-  status <- system2("typst",
-                    c("compile", "--root", shQuote(doc_dir), shQuote(output)))
+  pdf <- file.path(doc_dir, paste0(base, ".pdf"))
+  status <- system2("typst", c("compile", "--root", shQuote(doc_dir),
+                               shQuote(output), shQuote(pdf)))
   if (status != 0) {
-    stop("typst compile failed (see message above).", call. = FALSE)
+    stop("typst compile failed (see message above).\n",
+         "  The intermediate file was kept for debugging -- the error's ",
+         "line numbers refer to it:\n  ", output, call. = FALSE)
   }
 
-  pdf <- sub("\\.typ$", ".pdf", output)
+  if (!keep) unlink(output)
   if (!quiet) message("Wrote ", pdf)
   invisible(pdf)
 }
