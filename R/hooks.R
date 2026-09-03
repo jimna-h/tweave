@@ -26,15 +26,21 @@ tweave_hooks <- function() {
   list(
     source = function(x, options) {
       if (isFALSE(options$include) || isFALSE(options$echo)) return("")
+      # Typst syntax highlighting should match the chunk's actual engine
+      # (r, python, ...), not be hardcoded -- otherwise Python chunks would
+      # render with R highlighting. NB: knitr's default `engine` for {r}
+      # chunks is literally "R " (capitalized, trailing space) -- normalize
+      # or R chunks would ask Typst for a "R" highlighter that doesn't exist.
+      lang <- if (is.null(options$engine)) "r" else tolower(trimws(options$engine))
       sprintf(
         '#block(
   fill: luma(240),
   inset: 8pt,
   radius: 4pt,
   width: 100%%,
-  raw("%s", lang: "r")
+  raw("%s", lang: "%s")
 )',
-        typst_escape(paste(x, collapse = "\n"))
+        typst_escape(paste(x, collapse = "\n")), lang
       )
     },
 

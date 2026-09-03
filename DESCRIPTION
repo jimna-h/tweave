@@ -1,6 +1,6 @@
 Package: tweave
 Title: Knit R Code into Typst Documents
-Version: 0.3.0
+Version: 0.4.0
 Authors@R:
     person("James", "Bruce", email = "CHANGE-ME@example.com", role = c("aut", "cre"))
 Description: Weaves R code chunks embedded in Typst ('.typ') documents and
@@ -15,7 +15,8 @@ Imports:
     utils
 Suggests:
     testthat (>= 3.0.0),
-    withr
+    withr,
+    reticulate
 Config/testthat/edition: 3
 SystemRequirements: Typst CLI (https://typst.app/)
 URL: https://github.com/jimna-h/tweave

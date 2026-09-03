@@ -24,6 +24,7 @@ weave <- function(input, output = NULL, quiet = FALSE, keep = FALSE) {
          call. = FALSE)
   }
   check_typst()
+  register_python_engine()
 
   input <- normalizePath(input)
   doc_dir <- dirname(input)
@@ -77,6 +78,17 @@ check_typst <- function() {
       "  (If you just installed it, open a fresh terminal.)",
       call. = FALSE
     )
+  }
+  invisible(TRUE)
+}
+
+# Enable ```{python} chunks via knitr's built-in reticulate engine, if
+# reticulate is installed. R-only users are unaffected either way: without
+# reticulate, ```{r} chunks work exactly as before and a ```{python} chunk
+# simply isn't recognized (knitr's usual "unknown engine" behavior).
+register_python_engine <- function() {
+  if (requireNamespace("reticulate", quietly = TRUE)) {
+    knitr::knit_engines$set(python = reticulate::eng_python)
   }
   invisible(TRUE)
 }

@@ -2,12 +2,13 @@
 
 **Write your statistics documents in Typst, with live R code — no Quarto required.**
 
-tweave knits R code chunks embedded in a `.typ` file, then compiles the result straight to PDF. You get Typst's fast, clean typesetting plus reproducible R output: code blocks, console output, plots, and inline values that update every time you build — for analyses, reports, assignments, exams, or anything you'd once have reached for Sweave to write.
+tweave knits R (and optionally Python) code chunks embedded in a `.typ` file, then compiles the result straight to PDF. You get Typst's fast, clean typesetting plus reproducible code output: code blocks, console output, plots, and inline values that update every time you build — for analyses, reports, assignments, exams, or anything you'd once have reached for Sweave to write.
 
 It ships with a stats-focused Typst package (also called `tweave`) that provides:
 
 - **Math shorthands** — `iid` (∼ with "iid" above it), `bar(x)` for sample means, `choose(x, y)` for binomial coefficients, hypotheses `H0`/`HA`, upright distribution names (`Normal`, `Poisson`, `Binomial`, …), and differentials `dx`, `dt`, `dtheta`, …
 - **Inline R values** — `` `r mean(y)` `` in your prose, auto-rounded (set `digits` in R to control precision) with scientific notation rendered as proper Typst math
+- **Python chunks alongside R ones** — ```` ```{python} ```` chunks weave through the same pipeline (via [reticulate](https://rstudio.github.io/reticulate/)), with shared state and matplotlib figure capture, if you'd rather work in Python for a given analysis — [details below](#python-chunks-optional)
 - **Sensible defaults** — styled code/output blocks, numbered equations, auto-linked URLs, a title block
 
 tweave deliberately does *not* impose document structure like question numbering, prompt boxes, or point tallies. It composes with any of the templates on [Typst Universe](https://typst.app/universe/) — grape-suite, tinyset, adaptable-pset, and others — or with a few `#let` definitions of your own (the example shows this pattern).
@@ -202,6 +203,32 @@ Every tweave document starts with the same few lines of boilerplate. VS Code *sn
 
 4. Save. Now in any `.typ` file, type `tweave` and press **Tab**: the whole header appears, your cursor lands on the title, **Tab** jumps to the author, and a final **Tab** drops you below the setup chunk, ready to write.
 
+If you'll be starting documents with Python instead of R, add a second entry to the same `typst.json` (right after the one above, separated by a comma):
+
+```json
+   "tweave document setup (python)": {
+     "prefix": "tweavepy",
+     "body": [
+       "#import \"@local/tweave:0.1.0\": *",
+       "#show: tweave.with(",
+       "  title: \"${1:Title}\",",
+       "  author: \"${2:Your Name}\",",
+       ")",
+       "",
+       "```{python}",
+       "# Global Setup",
+       "import numpy as np",
+       "np.random.seed(123)  # for reproducibility",
+       "```",
+       "",
+       "$0"
+     ],
+     "description": "tweave template import + global Python setup chunk"
+   }
+```
+
+Type `tweavepy` and Tab for the Python-flavored version. Mixed documents just start with whichever engine's setup you need most and add ```` ```{r} ```` or ```` ```{python} ```` chunks freely after that.
+
 ### One important gotcha: the live preview doesn't run R
 
 Tinymist's preview button (top-right when a `.typ` file is open) compiles your document *directly*, skipping the R step — so R chunks show up as plain code blocks, inline `` `r ...` `` values appear as literal text, and plots are missing. This is normal, not a bug.
@@ -217,6 +244,39 @@ Standard knitr options work in the chunk header:
 - ```` ```{r, results='hide'} ```` — show the code but not its output
 
 Inline numbers round to 4 digits by default; put `digits <- 2` in any chunk to change that.
+
+### Python chunks (optional)
+
+tweave also weaves ```` ```{python} ```` chunks, side by side with ```` ```{r} ```` ones in the same document — same pipeline, no extra setup beyond installing [reticulate](https://rstudio.github.io/reticulate/):
+
+```r
+install.packages("reticulate")
+```
+
+```typst
+#import "@local/tweave:0.1.0": *
+#show: tweave.with(title: "Mixed R and Python", author: "Your Name")
+
+```{python}
+import numpy as np
+y = np.array([1, 2, 3, 4, 5])
+y.mean()
+```
+
+The Python mean is `r py$y.mean()`.
+```
+
+Python chunks share state with each other (a variable set in one chunk is visible in the next), and matplotlib figures are captured the same way R plots are — just call `plt.show()`. To read a Python value into R prose, use reticulate's `py` object as shown above. If reticulate isn't installed, ```` ```{r} ```` chunks are completely unaffected; a ```` ```{python} ```` chunk is simply left un-run, the same as any unknown knitr engine.
+
+**Pinning a specific Python interpreter or virtual environment:** by default reticulate finds *some* Python on your system, which may not be the one you want. Add this near the top of your document (in an `include=FALSE` chunk, before any other Python chunk) to pin it:
+
+```{r, include=FALSE}
+reticulate::use_python("/path/to/python")      # a specific interpreter, or
+reticulate::use_virtualenv("myenv")            # a named virtualenv, or
+reticulate::use_condaenv("myenv")              # a named conda environment
+```
+
+Run `reticulate::py_config()` in the R console to see which Python reticulate is currently finding and why.
 
 ### Not using VS Code?
 
@@ -244,6 +304,9 @@ Typst isn't installed, or your terminal was open when you installed it. Close an
 
 **`tweave: could not find R`**
 The Windows shim looks for R on your PATH, then in the registry. This message means R isn't installed (or was installed in a very unusual way). Install R from [cran.r-project.org](https://cran.r-project.org/) with default options.
+
+**A `{python}` chunk is silently skipped, or errors about an unknown engine**
+`reticulate` isn't installed — run `install.packages("reticulate")` and rebuild. If it *is* installed but errors about modules it can't find, reticulate is likely using the wrong Python; see [Pinning a specific Python interpreter](#python-chunks-optional) above, and check `reticulate::py_config()`.
 
 **`error: package not found ... @local/tweave:0.1.0`**
 The Typst template package isn't installed. Run `tweave::install()` in R — it places it in the right folder for your OS automatically.

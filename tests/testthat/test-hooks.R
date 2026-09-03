@@ -13,6 +13,15 @@ test_that("format_inline rounds and renders scientific notation", {
   expect_equal(tweave:::format_inline("text"), "text")
 })
 
+test_that("source hook picks the right Typst raw() lang per engine", {
+  h <- tweave:::tweave_hooks()
+  # knitr's actual default for {r} chunks is "R " (capitalized, trailing
+  # space) -- must normalize to "r" or Typst's highlighter won't match.
+  expect_match(h$source("1+1", list(engine = "R ")), 'lang: "r"')
+  expect_match(h$source("1+1", list()), 'lang: "r"')
+  expect_match(h$source("x=1", list(engine = "python")), 'lang: "python"')
+})
+
 test_that("source hook respects echo/include", {
   h <- tweave:::tweave_hooks()
   expect_equal(h$source("x <- 1", list(echo = FALSE)), "")
