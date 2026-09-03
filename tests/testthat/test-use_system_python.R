@@ -262,3 +262,50 @@ test_that("find_system_python skips a fake alias planted ahead of a real interpr
   expect_true(tweave:::python_is_usable(found))
   expect_false(identical(dirname(found), fake_dir))
 })
+
+test_that("find_system_python prefers a non-Store candidate across different command names", {
+  # Isolates the NEW primary-stage logic specifically: "python" resolves
+  # to a Store-like path, "python3" resolves to a normal one -- these
+  # are different command names, so this can't be satisfied by the
+  # PATH-scanning fallback (which only ever handles one name at a time).
+  store_dir <- withr::local_tempdir()
+  store_like <- file.path(store_dir, "WindowsApps")
+  dir.create(store_like)
+  writeLines(c("#!/bin/sh", 'echo "Python 3.11.9"', "exit 0"),
+             file.path(store_like, "python"))
+  Sys.chmod(file.path(store_like, "python"), "0755")
+
+  normal_dir <- withr::local_tempdir()
+  writeLines(c("#!/bin/sh", 'echo "Python 3.12.1"', "exit 0"),
+             file.path(normal_dir, "python3"))
+  Sys.chmod(file.path(normal_dir, "python3"), "0755")
+
+  withr::local_envvar(PATH = paste(store_like, normal_dir, sep = .Platform$path.sep))
+
+  found <- tweave:::find_system_python()
+  expect_false(tweave:::python_looks_like_store_alias(found))
+  expect_equal(basename(found), "python3")
+})
+
+test_that("find_system_python prefers a non-Store candidate over a Store one, both usable", {
+  # A Store-packaged Python can pass the shallow usability check and
+  # still fail later on DLL access -- prefer a normal install when one
+  # exists, even if a Store one also technically "works" by this check.
+  store_dir <- withr::local_tempdir()
+  store_like <- file.path(store_dir, "WindowsApps")
+  dir.create(store_like)
+  writeLines(c("#!/bin/sh", 'echo "Python 3.11.9"', "exit 0"),
+             file.path(store_like, "python3"))
+  Sys.chmod(file.path(store_like, "python3"), "0755")
+
+  normal_dir <- withr::local_tempdir()
+  writeLines(c("#!/bin/sh", 'echo "Python 3.12.1"', "exit 0"),
+             file.path(normal_dir, "python3"))
+  Sys.chmod(file.path(normal_dir, "python3"), "0755")
+
+  withr::local_envvar(PATH = paste(store_like, normal_dir, sep = .Platform$path.sep))
+
+  found <- tweave:::find_system_python()
+  expect_false(tweave:::python_looks_like_store_alias(found))
+  expect_equal(dirname(found), normal_dir)
+})

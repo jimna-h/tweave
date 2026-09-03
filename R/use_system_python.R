@@ -89,12 +89,26 @@ find_system_python <- function() {
     list("python3", "python")
   }
 
+  # Collect every candidate that passes the basic usability check, then
+  # prefer a non-Store one if any exists -- a Microsoft Store-packaged
+  # Python can pass this shallow check (it launches, it reports its own
+  # sys.executable correctly) and still fail later loading its own DLLs,
+  # because Store app packages are locked down to processes carrying the
+  # right AppX capability token, which doesn't always propagate through
+  # a deeply nested process tree (R -> cmd.exe -> python.exe). A
+  # traditionally-installed Python has no such restriction.
+  usable <- character()
   for (cmd in candidates) {
     resolved <- run_python_probe(cmd)
     status <- attr(resolved, "status")
     if (!is.null(status) && status != 0) next
     if (length(resolved) != 1 || resolved == "") next
-    if (python_is_usable(resolved)) return(resolved)
+    if (python_is_usable(resolved)) usable <- c(usable, resolved)
+  }
+  if (length(usable) > 0) {
+    is_store <- vapply(usable, python_looks_like_store_alias, logical(1))
+    if (any(!is_store)) return(usable[!is_store][1])
+    return(usable[1])
   }
 
   # Last-resort fallback: manually scan PATH, in case neither `python`,

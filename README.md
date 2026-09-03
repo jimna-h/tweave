@@ -387,6 +387,11 @@ If it *still* fails after all that, please open an issue with the exact output �
 **Warnings about `RETICULATE_PYTHON is set to "C:UserssirjaAppDataLocal..."` with all the backslashes missing**
 A real bug, fixed in 0.7.1: R's `.Renviron` file format treats backslash as an escape character, so an unescaped Windows path written there gets every backslash silently stripped the next time it's read. `tweave::use_system_python()` now converts to forward slashes (which Windows accepts everywhere) before saving. If your `.Renviron` already has a corrupted entry from an older version, just rerun `tweave::use_system_python()` on 0.7.1+ — it overwrites the existing line with a corrected one and also fixes the *current* session immediately, without needing a restart.
 
+**A `{python}` chunk fails with `... python311.dll - Access is denied.`, pointing at a path under `WindowsApps`**
+This is Python installed from the **Microsoft Store**, not a tweave or reticulate bug. Store-distributed Python packages are locked down by Windows' own AppX security model — only processes carrying the correct package "capability token" can read files inside their install folder, and that token doesn't always propagate correctly through a deeply nested process tree (an R session launching a Python chunk build is exactly that). The interpreter can launch and even report its own path correctly, then still fail loading its own DLL later — which is why this can surface as a build failure even after `tweave::use_system_python()` reports success.
+
+The fix: install Python from **[python.org](https://www.python.org/downloads/)** instead (check "Add python.exe to PATH" during install), then rerun `tweave::use_system_python()`. A traditional install has none of the Store package's access restrictions. (0.7.2+ already prefers a non-Store Python automatically if you have one — this only bites when the Store version is the *only* Python tweave can find.)
+
 **`error: unknown variable: r2`** (or similar, pointing at an inline `` `r ...` `` inside `$...$`)
 This is the VS Code *preview*, not a real build — see [the live preview gotcha](#one-important-gotcha-the-live-preview-doesnt-run-r-or-python) above for why, and for a rewrite that keeps the preview working (put the value outside the `$...$`, not inside it).
 
