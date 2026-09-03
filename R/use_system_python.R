@@ -75,14 +75,7 @@ find_system_python <- function() {
   }
 
   for (cmd in candidates) {
-    exe <- cmd[[1]]
-    code <- "import sys; print(sys.executable)"
-    args <- c(cmd[-1], "-c", shQuote(code))
-    resolved <- tryCatch(
-      system2(exe, args, stdout = TRUE, stderr = TRUE),
-      error = function(e) character(),
-      warning = function(w) character()
-    )
+    resolved <- run_python_probe(cmd)
     status <- attr(resolved, "status")
     if (!is.null(status) && status != 0) next
     if (length(resolved) != 1 || resolved == "") next
@@ -109,6 +102,54 @@ find_system_python <- function() {
   }
 
   ""
+}
+
+# Run `<cmd> <probe-script>` and return the output -- where the probe
+# script is a small temp .py file, not an inline one-liner. Passing a
+# one-liner containing semicolons and parentheses through nested shell
+# quoting (R -> cmd.exe -> the target program) is one of the most
+# fragile corners of Windows scripting; a file path is a much narrower,
+# better-understood quoting problem (usually needing no quoting at all).
+#
+# On Windows, this goes through cmd.exe /c explicitly rather than
+# spawning the process directly: a Windows App Execution Alias is a
+# special reparse point (IO_REPARSE_TAG_APPEXECLINK) that the generic
+# kernel I/O layer doesn't understand at all -- only launchers with
+# specific support for it (cmd.exe, PowerShell, Explorer) can resolve
+# and redirect through one. A generic process-spawn (what a direct
+# system2() call amounts to) can fail on exactly the same alias that
+# `cmd.exe /c python ...` handles correctly -- this mirrors a
+# documented case of a different shell (4NT) getting a flat "No access
+# to the file" error on an alias cmd.exe resolves fine.
+run_python_probe <- function(cmd) {
+  exe <- cmd[[1]]
+  extra_args <- cmd[-1]
+
+  script <- tempfile(fileext = ".py")
+  on.exit(unlink(script), add = TRUE)
+  writeLines("import sys; print(sys.executable)", script)
+
+  args <- c(extra_args, shQuote(script))
+
+  if (.Platform$OS.type == "windows") {
+    wrapped <- windows_cmd_wrap(exe, args)
+    exe <- wrapped$exe
+    args <- wrapped$args
+  }
+
+  tryCatch(
+    system2(exe, args, stdout = TRUE, stderr = TRUE),
+    error = function(e) character(),
+    warning = function(w) character()
+  )
+}
+
+# Pure string-construction logic for routing a command through
+# `cmd.exe /c`, factored out so it's testable on any platform (the
+# actual invocation can only be verified on real Windows, but the
+# command-line it constructs can be checked everywhere).
+windows_cmd_wrap <- function(exe, args) {
+  list(exe = "cmd", args = c("/c", paste(c(exe, args), collapse = " ")))
 }
 
 # All PATH entries matching an executable name, in PATH order -- unlike

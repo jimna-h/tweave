@@ -7,14 +7,31 @@ test_that("find_system_python resolves via sys.executable, not file guessing", {
   expect_true(tweave:::python_is_usable(found))
 })
 
-test_that("the -c code argument survives shell quoting intact", {
-  # Regression test for a real bug: passing "import sys; print(...)" as
-  # a raw system2() argument let the shell split on the semicolon and
-  # choke on the parentheses ("sh: Syntax error: word unexpected").
-  # shQuote() must wrap the whole code string as one token.
+test_that("windows_cmd_wrap constructs a well-formed cmd.exe invocation", {
+  wrapped <- tweave:::windows_cmd_wrap("py", c("-3", "C:/temp/probe.py"))
+  expect_equal(wrapped$exe, "cmd")
+  expect_equal(wrapped$args, c("/c", 'py -3 C:/temp/probe.py'))
+
+  # A path containing spaces must arrive here already shQuote()'d by the
+  # caller (run_python_probe does this, using cmd-style quoting on
+  # Windows) -- confirm the wrapper preserves an already-quoted argument
+  # intact rather than re-mangling it. Forced to type="cmd" explicitly
+  # here so this assertion is meaningful even when this test itself
+  # runs on a non-Windows machine.
+  quoted_path <- shQuote("C:/Program Files/probe.py", type = "cmd")
+  wrapped2 <- tweave:::windows_cmd_wrap("python", quoted_path)
+  expect_true(grepl('"C:/Program Files/probe.py"', wrapped2$args[2], fixed = TRUE))
+})
+
+test_that("run_python_probe resolves a real interpreter's own path", {
   skip_if(Sys.which("python3") == "", "no system python3 in this environment")
-  out <- system2("python3", c("-c", shQuote("import sys; print(sys.executable)")),
-                stdout = TRUE, stderr = TRUE)
+  # Regression coverage for the underlying design: probing via a temp
+  # script file (not an inline one-liner threaded through nested shell
+  # quoting) still correctly resolves sys.executable. The original
+  # one-liner approach hit a real bug -- semicolons and parens getting
+  # mangled by shell interpretation -- which the file-based probe
+  # sidesteps by construction.
+  out <- tweave:::run_python_probe(list("python3"))
   expect_false(any(grepl("Syntax error", out)))
   expect_true(tweave:::python_is_usable(out))
 })
