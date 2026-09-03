@@ -73,6 +73,44 @@ test_that("a persisted RETICULATE_PYTHON is honored by a fresh R process", {
   expect_true(any(grepl(py, out, fixed = TRUE)))
 })
 
+test_that("python_is_usable rejects the Windows alias's own rejection message", {
+  # Real-world behavior, confirmed: running the Windows Store alias with
+  # --version prints "Python was not found; run without arguments to
+  # install from the Microsoft Store..." -- which contains the literal
+  # word "Python". A loose substring check would wrongly accept this.
+  # Exit code 0 specifically isolates the bug: a nonzero exit alone
+  # would already reject it for unrelated reasons.
+  fake_alias <- withr::local_tempfile()
+  writeLines(c(
+    "#!/bin/sh",
+    'echo "Python was not found; run without arguments to install from the Microsoft Store, or disable this shortcut from Settings > Manage App Execution Aliases."',
+    "exit 0"
+  ), fake_alias)
+  Sys.chmod(fake_alias, "0755")
+
+  expect_false(tweave:::python_is_usable(fake_alias))
+})
+
+test_that("python_is_usable also rejects the alias when it exits nonzero", {
+  fake_alias <- withr::local_tempfile()
+  writeLines(c(
+    "#!/bin/sh",
+    'echo "Python was not found; run without arguments to install from the Microsoft Store..."',
+    "exit 9009"
+  ), fake_alias)
+  Sys.chmod(fake_alias, "0755")
+
+  expect_false(tweave:::python_is_usable(fake_alias))
+})
+
+test_that("python_is_usable accepts a real version string", {
+  fake_real <- withr::local_tempfile()
+  writeLines(c("#!/bin/sh", 'echo "Python 3.12.3"', "exit 0"), fake_real)
+  Sys.chmod(fake_real, "0755")
+
+  expect_true(tweave:::python_is_usable(fake_real))
+})
+
 test_that("python_looks_like_store_alias recognizes the Windows trap", {
   expect_true(tweave:::python_looks_like_store_alias(
     "C:\\Users\\sirja\\AppData\\Local\\Microsoft\\WindowsApps\\python.exe"

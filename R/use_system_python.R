@@ -115,14 +115,22 @@ python_looks_like_store_alias <- function(path) {
     grepl("MICROS~.\\\\WINDOW~", path, ignore.case = TRUE)
 }
 
-# TRUE if `path --version` actually runs and looks like a real Python.
+# TRUE if `path --version` actually runs and prints a real version
+# number. Deliberately strict: Windows's App Execution Alias stub, when
+# run with --version, prints "Python was not found; run without
+# arguments to install from the Microsoft Store..." -- which contains
+# the literal word "Python", so a loose substring check is fooled by
+# the alias's own rejection message. Requiring digits right after
+# "Python" rules that out.
 python_is_usable <- function(path) {
   out <- tryCatch(
     system2(path, "--version", stdout = TRUE, stderr = TRUE),
     error = function(e) character(),
     warning = function(w) character()
   )
-  length(out) > 0 && any(grepl("Python", out, ignore.case = TRUE))
+  status <- attr(out, "status")
+  if (!is.null(status) && status != 0) return(FALSE)
+  length(out) > 0 && any(grepl("^Python \\d+\\.\\d", out, ignore.case = TRUE))
 }
 
 # -- .Renviron helpers -----------------------------------------------
