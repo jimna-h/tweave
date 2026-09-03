@@ -229,11 +229,39 @@ If you'll be starting documents with Python instead of R, add a second entry to 
 
 Type `tweavepy` and Tab for the Python-flavored version. Mixed documents just start with whichever engine's setup you need most and add ```` ```{r} ```` or ```` ```{python} ```` chunks freely after that.
 
-### One important gotcha: the live preview doesn't run R
+### One important gotcha: the live preview doesn't run R (or Python)
 
-Tinymist's preview button (top-right when a `.typ` file is open) compiles your document *directly*, skipping the R step — so R chunks show up as plain code blocks, inline `` `r ...` `` values appear as literal text, and plots are missing. This is normal, not a bug.
+Tinymist's preview button (top-right when a `.typ` file is open) compiles your document *directly*, skipping the knit step — so code chunks show up as plain code blocks, inline `` `r ...` `` / `` `py ...` `` values appear as literal text, and plots are missing. This is normal, not a bug.
 
-Use the preview for checking **layout, math, and prose**, and use **Ctrl + Shift + B** whenever you need to see **actual R results**. If you want a live-ish view of the real output, run a build and open `yourfile.pdf` in a VS Code tab — it refreshes each time you rebuild.
+**One case is worse than "looks wrong": an inline value inside math mode (`$...$`) will show a red squiggly error, not just odd text.** For example, `$R^2 = `r r2`$` previews as:
+
+```
+error: unknown variable: r2
+```
+
+This is a fundamental Typst rule, not a bug or a missing setting — [per Typst's own docs](https://typst.app/docs/reference/math/), a bare multi-letter run inside `$...$` is *always* resolved as a variable or function name, with no raw/escape syntax available (backticks mean nothing special in math mode; there's no compiler flag or Tinymist setting to turn this off). And it's not cosmetic to just that line: **a single unresolved error like this fails the *entire* compile**, so the whole document's preview goes blank, not just that equation, until you fix or work around it.
+
+**The fix that keeps the preview working: put the value outside the math zone, not inside it.** A knit-time value can never appear *inside* a live `$...$`, only next to one — but you can put the `=` (or any other trailing operator) inside math and leave only the bare number in prose right after, which keeps the spacing and sizing visually identical to writing it all as one expression:
+
+```typst
+A simple linear fit gives ($R^2 =$ `r r2`).
+```
+
+instead of
+
+```typst
+A simple linear fit gives ($R^2 = `r r2`$).
+```
+
+There's no live `$...$` zone containing unresolved syntax in the raw source this way, so the preview compiles and renders normally at every point while you're editing — no more blank preview. And because this still uses a plain `` `r r2` `` inline substitution (not a hand-built string), tweave's automatic `digits`-rounding keeps working with no extra effort.
+
+**The real tradeoff:** this means no knit-time value can ever sit *inside* Typst math syntax — only immediately before or after a self-contained math zone. For a trailing `=`-then-value pattern like the one above, that costs nothing visually. For values that need to appear in the *middle* of an expression (an exponent, a fraction, a subscript), there's no way to route around this — split the expression into multiple self-contained math zones around the value, or accept that line's preview will error until you build.
+
+If you'd rather not restructure existing math, or run into another case Typst won't parse pre-knit, the fallback is simply: ignore the preview error on that line and use the preview for everything else.
+
+Use the preview for checking **layout, math, and prose**, and use **Ctrl + Shift + B** whenever you need to see **actual results**. If you want a live-ish view of the real output, run a build and open `yourfile.pdf` in a VS Code tab — it refreshes each time you rebuild.
+
+**Chunk fence spacing:** both ```` ```{r} ```` and ```` ``` {r} ```` (with a space) are knitted identically by tweave — but the space avoids one extra Tinymist warning ("no whitespace before raw text") when previewing un-knitted source, since Typst would otherwise read `{r}` as an attempted (invalid) syntax-highlighting language tag. Either form works; the space just makes the live preview a little quieter.
 
 ### Chunk options
 
@@ -307,6 +335,9 @@ The Windows shim looks for R on your PATH, then in the registry. This message me
 
 **A `{python}` chunk is silently skipped, or errors about an unknown engine**
 `reticulate` isn't installed — run `install.packages("reticulate")` and rebuild. If it *is* installed but errors about modules it can't find, reticulate is likely using the wrong Python; see [Pinning a specific Python interpreter](#python-chunks-optional) above, and check `reticulate::py_config()`.
+
+**`error: unknown variable: r2`** (or similar, pointing at an inline `` `r ...` `` inside `$...$`)
+This is the VS Code *preview*, not a real build — see [the live preview gotcha](#one-important-gotcha-the-live-preview-doesnt-run-r-or-python) above for why, and for a rewrite that keeps the preview working (put the value outside the `$...$`, not inside it).
 
 **`error: package not found ... @local/tweave:0.1.0`**
 The Typst template package isn't installed. Run `tweave::install()` in R — it places it in the right folder for your OS automatically.
