@@ -1,3 +1,24 @@
+test_that("find_system_python resolves via sys.executable, not file guessing", {
+  skip_if(Sys.which("python3") == "", "no system python3 in this environment")
+  # This exercises the NEW primary mechanism directly: running the
+  # candidate by name and asking it for its own path, rather than the
+  # PATH-scanning fallback.
+  found <- tweave:::find_system_python()
+  expect_true(tweave:::python_is_usable(found))
+})
+
+test_that("the -c code argument survives shell quoting intact", {
+  # Regression test for a real bug: passing "import sys; print(...)" as
+  # a raw system2() argument let the shell split on the semicolon and
+  # choke on the parentheses ("sh: Syntax error: word unexpected").
+  # shQuote() must wrap the whole code string as one token.
+  skip_if(Sys.which("python3") == "", "no system python3 in this environment")
+  out <- system2("python3", c("-c", shQuote("import sys; print(sys.executable)")),
+                stdout = TRUE, stderr = TRUE)
+  expect_false(any(grepl("Syntax error", out)))
+  expect_true(tweave:::python_is_usable(out))
+})
+
 test_that("find_system_python finds something real on this machine", {
   skip_if(Sys.which("python3") == "" && Sys.which("python") == "",
           "no python on PATH in this environment")
@@ -139,6 +160,35 @@ test_that("python_path_candidates finds all PATH matches, not just the first", {
   found <- tweave:::python_path_candidates("python3")
   expect_true(length(found) >= 1)
   expect_true(any(file.exists(found)))
+})
+
+test_that("find_system_python still accepts a real interpreter even under a WindowsApps-style path", {
+  # A legitimate, working Python installed from the Microsoft Store
+  # lives under the same directory as the broken alias stub -- path
+  # alone can't tell them apart, only behavior can. Simulate: a broken
+  # alias-like path (fails --version) and a working one (passes),
+  # both under directories containing "WindowsApps", to confirm the
+  # working one still gets found despite looking suspicious by path.
+  broken_dir <- withr::local_tempdir()
+  windowsapps_like <- file.path(broken_dir, "WindowsApps")
+  dir.create(windowsapps_like)
+  writeLines(c("#!/bin/sh",
+    'echo "Python was not found; run without arguments to install..."',
+    "exit 0"), file.path(windowsapps_like, "python3"))
+  Sys.chmod(file.path(windowsapps_like, "python3"), "0755")
+
+  working_dir <- withr::local_tempdir()
+  working_windowsapps_like <- file.path(working_dir, "WindowsApps")
+  dir.create(working_windowsapps_like)
+  writeLines(c("#!/bin/sh", 'echo "Python 3.11.9"', "exit 0"),
+             file.path(working_windowsapps_like, "python3"))
+  Sys.chmod(file.path(working_windowsapps_like, "python3"), "0755")
+
+  withr::local_envvar(PATH = paste(windowsapps_like, working_windowsapps_like,
+                                   sep = .Platform$path.sep))
+
+  found <- tweave:::find_system_python()
+  expect_equal(found, file.path(working_windowsapps_like, "python3"))
 })
 
 test_that("find_system_python skips a fake alias planted ahead of a real interpreter", {

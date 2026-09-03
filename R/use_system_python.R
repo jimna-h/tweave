@@ -57,39 +57,54 @@ use_system_python <- function(python = NULL, persist = TRUE) {
   invisible(python)
 }
 
-# The Python a plain `pip install` would target. Unlike a naive
-# Sys.which(), this skips Windows's fake "App Execution Alias" stub
-# (a placeholder python.exe that Windows puts on PATH by default, even
-# with no Python installed via the Store -- it exists but isn't a real
-# interpreter) and verifies each candidate actually runs before
-# accepting it.
+# The Python a plain `pip install` would target. Rather than guessing
+# file paths on PATH and checking file.exists() -- which doesn't work
+# reliably against Windows's App Execution Alias stubs, since those
+# aren't normal files, they're reparse-point stubs that only behave
+# correctly when invoked by name through the OS's own command
+# resolution -- this runs each candidate command *by name* (exactly
+# like typing it in a terminal) and asks the running interpreter for
+# its own canonical path via `sys.executable`. That's the genuine
+# install location, never the alias stub itself, since the alias only
+# affects how Python gets *started*, not what it reports once running.
 find_system_python <- function() {
-  # On Windows, the official Python Launcher (py.exe) is more reliable
-  # than searching PATH by name: it's designed specifically to locate a
-  # real, working Python installation and isn't itself alias-shadowed.
-  if (.Platform$OS.type == "windows") {
-    py_launcher <- tryCatch(
-      system2("py", c("-3", "-c", "import sys; print(sys.executable)"),
-              stdout = TRUE, stderr = TRUE),
-      error = function(e) character()
-    )
-    if (length(py_launcher) == 1 && python_is_usable(py_launcher)) {
-      return(py_launcher)
-    }
+  candidates <- if (.Platform$OS.type == "windows") {
+    list(c("py", "-3"), "python", "python3")
+  } else {
+    list("python3", "python")
   }
 
+  for (cmd in candidates) {
+    exe <- cmd[[1]]
+    code <- "import sys; print(sys.executable)"
+    args <- c(cmd[-1], "-c", shQuote(code))
+    resolved <- tryCatch(
+      system2(exe, args, stdout = TRUE, stderr = TRUE),
+      error = function(e) character(),
+      warning = function(w) character()
+    )
+    status <- attr(resolved, "status")
+    if (!is.null(status) && status != 0) next
+    if (length(resolved) != 1 || resolved == "") next
+    if (python_is_usable(resolved)) return(resolved)
+  }
+
+  # Last-resort fallback: manually scan PATH, in case neither `python`,
+  # `python3`, nor the `py` launcher are invokable by name but a real
+  # interpreter is still findable as a file. Known to be unreliable for
+  # Windows alias stubs specifically, but harmless to try.
   names <- if (.Platform$OS.type == "windows") {
     c("python", "python3")
   } else {
     c("python3", "python")
   }
-
   for (n in names) {
-    for (candidate in python_path_candidates(n)) {
-      if (!python_looks_like_store_alias(candidate) &&
-          python_is_usable(candidate)) {
-        return(candidate)
-      }
+    scan_candidates <- python_path_candidates(n)
+    is_alias_path <- vapply(scan_candidates, python_looks_like_store_alias,
+                            logical(1))
+    ordered <- c(scan_candidates[!is_alias_path], scan_candidates[is_alias_path])
+    for (candidate in ordered) {
+      if (python_is_usable(candidate)) return(candidate)
     }
   }
 
@@ -109,7 +124,11 @@ python_path_candidates <- function(name) {
 
 # Windows's App Execution Alias stubs live under a well-known path,
 # whether Windows reports it in full or as an abbreviated 8.3 short path
-# (e.g. "...\MICROS~1\WINDOW~1\python.exe").
+# (e.g. "...\MICROS~1\WINDOW~1\python.exe"). Used only to *deprioritize*
+# a candidate (try it last) -- not to exclude it outright, since a real,
+# working Python installed from the Microsoft Store also lives under
+# this same directory. Only the actual --version behavior in
+# python_is_usable() is authoritative.
 python_looks_like_store_alias <- function(path) {
   grepl("WindowsApps", path, ignore.case = TRUE) ||
     grepl("MICROS~.\\\\WINDOW~", path, ignore.case = TRUE)
