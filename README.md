@@ -325,6 +325,16 @@ The Python mean is `r py$y.mean()`.
 
 Python chunks share state with each other (a variable set in one chunk is visible in the next), and matplotlib figures are captured the same way R plots are — just call `plt.show()`. To read a Python value into R prose, use reticulate's `py` object as shown above. If reticulate isn't installed, ```` ```{r} ```` chunks are completely unaffected; a ```` ```{python} ```` chunk is simply left un-run, the same as any unknown knitr engine.
 
+**Using matplotlib?** Force a non-interactive backend before importing `pyplot`, so `plt.show()` can't try to open a real window or hang waiting on a GUI event loop:
+
+```python
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+```
+
+This matters more on some machines than others — with no display available at all, matplotlib often defaults to a safe headless backend on its own, but with a normal desktop session present, it may pick an interactive one instead, which can behave unpredictably (or fail partway through a chunk) when run from a batch build like this rather than an interactive session. Setting it explicitly costs nothing either way.
+
 **Already have Python set up, with packages installed via a plain `pip install`?** By default, reticulate creates and uses its *own* isolated virtual environment — separate from whatever Python you've been installing packages into directly, which is why a chunk can fail with `ModuleNotFoundError` even for a package you know you've installed. Run this **once**, in the R console (not a terminal):
 
 ```r

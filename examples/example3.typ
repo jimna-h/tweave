@@ -53,6 +53,8 @@ tree's timber yield.
 
 ```{python, fig.width=5, fig.height=3.6, dpi=150}
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")  # headless-safe backend; plt.show() just discards
 import matplotlib.pyplot as plt
 
 # r.trees and r.pred reach directly into the R chunk above -- no CSV
