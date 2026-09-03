@@ -9,7 +9,7 @@ It ships with a stats-focused Typst package (also called `tweave`) that provides
 - **Math shorthands** — `iid` (∼ with "iid" above it), `bar(x)` for sample means, `choose(x, y)` for binomial coefficients, hypotheses `H0`/`HA`, upright distribution names (`Normal`, `Poisson`, `Binomial`, …), and differentials `dx`, `dt`, `dtheta`, …
 - **Inline R values** — `` `r mean(y)` `` in your prose, auto-rounded (set `digits` in R to control precision) with scientific notation rendered as proper Typst math
 - **`typst_vars()`** — for values that need to sit *inside* a complex math expression (a fraction, a square root, an exponent) rather than next to one — [details below](#values-inside-complex-equations-typst_vars)
-- **Python chunks alongside R ones** — ```` ```{python} ```` chunks weave through the same pipeline (via [reticulate](https://rstudio.github.io/reticulate/)), with shared state and matplotlib figure capture, if you'd rather work in Python for a given analysis — [details below](#python-chunks-optional)
+- **Python chunks alongside R ones** — ```` ```{python} ```` chunks weave through the same pipeline (via [reticulate](https://rstudio.github.io/reticulate/)), with shared state and matplotlib figure capture, if you'd rather work in Python for a given analysis — [details below](#python-chunks-optional). Already have Python packages installed? `tweave::use_system_python()` points reticulate at your existing setup instead of its own isolated environment, permanently, in one line.
 - **Sensible defaults** — styled code/output blocks, numbered equations, auto-linked URLs, a title block
 
 tweave deliberately does *not* impose document structure like question numbering, prompt boxes, or point tallies. It composes with any of the templates on [Typst Universe](https://typst.app/universe/) — grape-suite, tinyset, adaptable-pset, and others — or with a few `#let` definitions of your own (the example shows this pattern).
@@ -325,7 +325,15 @@ The Python mean is `r py$y.mean()`.
 
 Python chunks share state with each other (a variable set in one chunk is visible in the next), and matplotlib figures are captured the same way R plots are — just call `plt.show()`. To read a Python value into R prose, use reticulate's `py` object as shown above. If reticulate isn't installed, ```` ```{r} ```` chunks are completely unaffected; a ```` ```{python} ```` chunk is simply left un-run, the same as any unknown knitr engine.
 
-**Pinning a specific Python interpreter or virtual environment:** by default reticulate finds *some* Python on your system, which may not be the one you want. Add this near the top of your document (in an `include=FALSE` chunk, before any other Python chunk) to pin it:
+**Already have Python set up, with packages installed via a plain `pip install`?** By default, reticulate creates and uses its *own* isolated virtual environment — separate from whatever Python you've been installing packages into directly, which is why a chunk can fail with `ModuleNotFoundError` even for a package you know you've installed. Run this **once**, in the R console (not a terminal):
+
+```r
+tweave::use_system_python()
+```
+
+This finds the Python that a plain `pip install` targets, points reticulate at it, and — by default — saves that choice to your `.Renviron`, so every future `tweave` build uses it automatically. You won't need to repeat this per document, or even remember you did it.
+
+**Want a specific interpreter or virtual environment instead** (a named conda env, a project-specific venv)? Add this near the top of your document (in an `include=FALSE` chunk, before any other Python chunk):
 
 ```{r, include=FALSE}
 reticulate::use_python("/path/to/python")      # a specific interpreter, or
@@ -363,7 +371,13 @@ Typst isn't installed, or your terminal was open when you installed it. Close an
 The Windows shim looks for R on your PATH, then in the registry. This message means R isn't installed (or was installed in a very unusual way). Install R from [cran.r-project.org](https://cran.r-project.org/) with default options.
 
 **A `{python}` chunk is silently skipped, or errors about an unknown engine**
-`reticulate` isn't installed — run `install.packages("reticulate")` and rebuild. If it *is* installed but errors about modules it can't find, reticulate is likely using the wrong Python; see [Pinning a specific Python interpreter](#python-chunks-optional) above, and check `reticulate::py_config()`.
+`reticulate` isn't installed — run `install.packages("reticulate")` and rebuild. If it *is* installed but errors about modules it can't find, reticulate is likely using an isolated venv instead of your real Python — run `tweave::use_system_python()` once (see [Python chunks](#python-chunks-optional) above), and check `reticulate::py_config()`.
+
+**`ModuleNotFoundError: No module named 'matplotlib'`** (or `numpy`, or any other package)
+Reticulate found *a* Python on your system — usually its own isolated virtual environment, not the one you've been `pip install`-ing into. Two fixes, pick one:
+
+- **If you already have the package installed elsewhere:** run `tweave::use_system_python()` once in the R console (see [Python chunks](#python-chunks-optional) above) to point reticulate at that Python permanently.
+- **If you'd rather install into reticulate's own environment:** run `reticulate::py_install(c("numpy", "matplotlib"))` in the R console instead.
 
 **`error: unknown variable: r2`** (or similar, pointing at an inline `` `r ...` `` inside `$...$`)
 This is the VS Code *preview*, not a real build — see [the live preview gotcha](#one-important-gotcha-the-live-preview-doesnt-run-r-or-python) above for why, and for a rewrite that keeps the preview working (put the value outside the `$...$`, not inside it).
