@@ -384,6 +384,9 @@ Reticulate found *a* Python on your system — usually its own isolated virtual 
 
 If it *still* fails after all that, please open an issue with the exact output — the Windows-specific `cmd.exe` routing in this function is reasoned through carefully but could not be tested on a real Windows machine while building it.
 
+**Warnings about `RETICULATE_PYTHON is set to "C:UserssirjaAppDataLocal..."` with all the backslashes missing**
+A real bug, fixed in 0.7.1: R's `.Renviron` file format treats backslash as an escape character, so an unescaped Windows path written there gets every backslash silently stripped the next time it's read. `tweave::use_system_python()` now converts to forward slashes (which Windows accepts everywhere) before saving. If your `.Renviron` already has a corrupted entry from an older version, just rerun `tweave::use_system_python()` on 0.7.1+ — it overwrites the existing line with a corrected one and also fixes the *current* session immediately, without needing a restart.
+
 **`error: unknown variable: r2`** (or similar, pointing at an inline `` `r ...` `` inside `$...$`)
 This is the VS Code *preview*, not a real build — see [the live preview gotcha](#one-important-gotcha-the-live-preview-doesnt-run-r-or-python) above for why, and for a rewrite that keeps the preview working (put the value outside the `$...$`, not inside it).
 

@@ -80,6 +80,44 @@ test_that("renviron_set creates .Renviron if it doesn't exist yet", {
   expect_true("RETICULATE_PYTHON=/usr/bin/python3" %in% readLines(tmp))
 })
 
+test_that("a Windows-style backslash path survives .Renviron round-trip intact", {
+  # Real bug, confirmed: R's .Renviron parser treats backslash as an
+  # escape character and silently drops unrecognized sequences, so an
+  # unescaped "C:\Users\..." path gets every backslash stripped on the
+  # next read. Converting to forward slashes (which Windows accepts
+  # everywhere) sidesteps this rather than trying to replicate R's
+  # exact escaping rules.
+  tmp <- withr::local_tempfile()
+  withr::local_envvar(R_ENVIRON_USER = tmp)
+
+  windows_path <- "C:\\Users\\sirja\\AppData\\Local\\Microsoft\\WindowsApps\\python.exe"
+  safe_value <- chartr("\\", "/", windows_path)
+  tweave:::renviron_set("RETICULATE_PYTHON", safe_value)
+
+  out <- system2(
+    "Rscript",
+    c("-e", shQuote('cat(Sys.getenv("RETICULATE_PYTHON"))')),
+    stdout = TRUE,
+    env = paste0("R_ENVIRON_USER=", tmp)
+  )
+  expect_equal(out, "C:/Users/sirja/AppData/Local/Microsoft/WindowsApps/python.exe")
+})
+
+test_that("use_system_python takes effect even with a stale RETICULATE_PYTHON already set", {
+  # reticulate::use_python() refuses to override an already-set
+  # RETICULATE_PYTHON by design -- if a prior corrupted .Renviron entry
+  # left a bad value loaded in the current session, calling use_python()
+  # alone would be silently ignored. use_system_python() must set the
+  # env var itself first so the current session is corrected immediately.
+  skip_if(Sys.which("python3") == "", "no system python3 in this environment")
+  withr::local_envvar(RETICULATE_PYTHON = "/nonexistent/stale/path")
+
+  real_python <- unname(Sys.which("python3"))
+  expect_no_warning(tweave::use_system_python(python = real_python, persist = FALSE))
+  expect_equal(Sys.getenv("RETICULATE_PYTHON"), real_python)
+  expect_equal(reticulate::py_config()$python, real_python)
+})
+
 test_that("use_system_python errors clearly when nothing is found", {
   expect_error(
     tweave::use_system_python(python = ""),

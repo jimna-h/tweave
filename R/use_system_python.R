@@ -42,11 +42,26 @@ use_system_python <- function(python = NULL, persist = TRUE) {
     )
   }
 
+  # Set directly for the current session first: reticulate::use_python()
+  # refuses to override an already-set RETICULATE_PYTHON (by design), so
+  # if a stale value is already loaded -- e.g. from an earlier corrupted
+  # .Renviron entry -- calling use_python() alone would be silently
+  # ignored. Setting the env var ourselves makes this session correct
+  # immediately, not just future ones.
+  Sys.setenv(RETICULATE_PYTHON = python)
   reticulate::use_python(python, required = TRUE)
   message("Using Python: ", python)
 
   if (persist) {
-    path <- renviron_set("RETICULATE_PYTHON", python)
+    # R's .Renviron parser treats backslash as an escape character and
+    # silently drops unrecognized escape sequences -- an unescaped
+    # Windows path (C:\Users\...) written as-is gets corrupted on the
+    # next read (verified: every backslash vanishes). Forward slashes
+    # are accepted everywhere Windows accepts paths, so convert just
+    # for the persisted value; the path used right now, above, and
+    # everywhere else in this function stays exactly as found.
+    renviron_path_value <- chartr("\\", "/", python)
+    path <- renviron_set("RETICULATE_PYTHON", renviron_path_value)
     message(
       "Saved to ", path, " -- future R sessions, including future ",
       "tweave builds, will use this Python automatically. Restart R (or ",
