@@ -8,6 +8,7 @@ It ships with a stats-focused Typst package (also called `tweave`) that provides
 
 - **Math shorthands** — `iid` (∼ with "iid" above it), `bar(x)` for sample means, `choose(x, y)` for binomial coefficients, hypotheses `H0`/`HA`, upright distribution names (`Normal`, `Poisson`, `Binomial`, …), and differentials `dx`, `dt`, `dtheta`, …
 - **Inline R values** — `` `r mean(y)` `` in your prose, auto-rounded (set `digits` in R to control precision) with scientific notation rendered as proper Typst math
+- **`typst_vars()`** — for values that need to sit *inside* a complex math expression (a fraction, a square root, an exponent) rather than next to one — [details below](#values-inside-complex-equations-typst_vars)
 - **Python chunks alongside R ones** — ```` ```{python} ```` chunks weave through the same pipeline (via [reticulate](https://rstudio.github.io/reticulate/)), with shared state and matplotlib figure capture, if you'd rather work in Python for a given analysis — [details below](#python-chunks-optional)
 - **Sensible defaults** — styled code/output blocks, numbered equations, auto-linked URLs, a title block
 
@@ -255,7 +256,35 @@ A simple linear fit gives ($R^2 = `r r2`$).
 
 There's no live `$...$` zone containing unresolved syntax in the raw source this way, so the preview compiles and renders normally at every point while you're editing — no more blank preview. And because this still uses a plain `` `r r2` `` inline substitution (not a hand-built string), tweave's automatic `digits`-rounding keeps working with no extra effort.
 
-**The real tradeoff:** this means no knit-time value can ever sit *inside* Typst math syntax — only immediately before or after a self-contained math zone. For a trailing `=`-then-value pattern like the one above, that costs nothing visually. For values that need to appear in the *middle* of an expression (an exponent, a fraction, a subscript), there's no way to route around this — split the expression into multiple self-contained math zones around the value, or accept that line's preview will error until you build.
+**The real tradeoff:** this means no knit-time value can ever sit *inside* Typst math syntax written the ordinary way — only immediately before or after a self-contained math zone. For a trailing `=`-then-value pattern like the one above, that costs nothing visually. For a value that needs to sit in the *middle* of an expression — under a square root, inside a fraction, as part of an exponent — there's a second tool for exactly that case.
+
+### Values inside complex equations: `typst_vars()`
+
+`tweave::typst_vars()` exposes a whole dictionary of R values as real, static Typst source, referenced with `.at("key", default: ...)` — valid Typst syntax at *any* position in a math expression, including deeply nested ones, and safe pre-knit because `default:` supplies a placeholder before the real value exists.
+
+Once, near the top of the document:
+
+```typst
+#let vals = (:)
+```
+
+In a chunk, after the values are computed:
+
+```typst
+```{r, results='asis', echo=FALSE}
+cat(tweave::typst_vars(list(mse = mse, sxx = sxx, t_crit = t_crit)))
+```
+```
+
+Then anywhere — including buried inside a square root:
+
+```typst
+$ beta_1 plus.minus t^* dot sqrt(vals.at("mse", default: 0) / vals.at("sxx", default: 0)) $
+```
+
+The pre-knit source always has *something* to resolve `vals` to (the empty placeholder, or an earlier `results='asis'` call), so the preview never breaks — and `typst_vars()` rounds numbers using the same `digits` convention as inline substitution, so there's no separate rounding step to remember. See [`examples/example3.typ`](examples/example3.typ) for the full worked pattern.
+
+This is more setup than the trailing-`=` trick, so reach for it only when a value genuinely needs to sit inside an expression rather than next to one.
 
 If you'd rather not restructure existing math, or run into another case Typst won't parse pre-knit, the fallback is simply: ignore the preview error on that line and use the preview for everything else.
 

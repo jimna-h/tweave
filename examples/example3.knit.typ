@@ -37,56 +37,73 @@
 R's built-in `trees` dataset records girth, height, and usable timber
 volume for 31 black cherry trees.
 
-```{r}
-data(trees)
+#block(
+  fill: luma(240),
+  inset: 8pt,
+  radius: 4pt,
+  width: 100%,
+  raw("data(trees)
 fit <- lm(Volume ~ Girth, data = trees)
 slope <- coef(fit)[2]
 r2 <- summary(fit)$r.squared
-pred <- fitted(fit)   # plain numeric vector, for the Python bridge below
-```
+pred <- fitted(fit)   # plain numeric vector, for the Python bridge below", lang: "r")
+)
 
-A simple linear fit puts the slope at *`r slope` cubic ft of volume per
-inch of girth* ($R^2 =$ `r r2`) — girth alone is a strong stand-in for a
+A simple linear fit puts the slope at *5.0659 cubic ft of volume per
+inch of girth* ($R^2 =$ 0.9353) — girth alone is a strong stand-in for a
 tree's timber yield.
 
 = The same fit, from Python
 
-```{python, fig.width=5, fig.height=3.6, dpi=150}
-import numpy as np
+#block(
+  fill: luma(240),
+  inset: 8pt,
+  radius: 4pt,
+  width: 100%,
+  raw("import numpy as np
 import matplotlib.pyplot as plt
 
 # r.trees and r.pred reach directly into the R chunk above -- no CSV
 # round-trip, no re-fitting from scratch.
-girth = np.array(r.trees["Girth"])
-volume = np.array(r.trees["Volume"])
+girth = np.array(r.trees[\"Girth\"])
+volume = np.array(r.trees[\"Volume\"])
 pred = np.array(r.pred)
 
 order = np.argsort(girth)
 plt.figure(figsize=(5, 3.6))
-plt.scatter(girth, volume, color="#33415c", s=28, label="observed")
-plt.plot(girth[order], pred[order], color="#c96a1a", lw=2, label="R's fit")
-plt.xlabel("Girth (in)")
-plt.ylabel("Volume (cu ft)")
+plt.scatter(girth, volume, color=\"#33415c\", s=28, label=\"observed\")
+plt.plot(girth[order], pred[order], color=\"#c96a1a\", lw=2, label=\"R's fit\")
+plt.xlabel(\"Girth (in)\")
+plt.ylabel(\"Volume (cu ft)\")
 plt.legend(frameon=False)
 plt.tight_layout()
-plt.show()
-
-residual_spread = float(np.std(volume - pred))
-```
+plt.show()", lang: "python")
+)#align(center, image("figure/example3/unnamed-chunk-2-1.png", width: 80%))#block(
+  fill: luma(240),
+  inset: 8pt,
+  radius: 4pt,
+  width: 100%,
+  raw("
+residual_spread = float(np.std(volume - pred))", lang: "python")
+)
 
 Python isn't re-fitting anything here — `r.pred` is the fitted-values vector
 R just computed, read straight across the bridge and re-drawn in
 matplotlib's style. The residual spread computed on the Python side,
-`r reticulate::py$residual_spread` cubic ft, is what R reports next.
+4.1125 cubic ft, is what R reports next.
 
 = Back in R
 
-```{r}
-py_resid <- reticulate::py$residual_spread
-```
+#block(
+  fill: luma(240),
+  inset: 8pt,
+  radius: 4pt,
+  width: 100%,
+  raw("py_resid <- reticulate::py$residual_spread", lang: "r")
+)
 
-Typical prediction error is about $bar(e) =$ `r py_resid` cubic ft — small
-enough, relative to a volume range of `r diff(range(trees$Volume))` cubic
+Typical prediction error is about $bar(e) =$ 4.1125 cubic ft — small
+enough, relative to a volume range of 66.8 cubic
 ft, that girth alone is a serviceable field estimate for timber volume.
 
 = A value genuinely inside an equation
@@ -99,15 +116,18 @@ whole dictionary of values as real Typst source, referenced with
 `.at("key", default: ...)` anywhere in the expression, including deep
 inside one:
 
-```{r}
-mse <- summary(fit)$sigma^2
+#block(
+  fill: luma(240),
+  inset: 8pt,
+  radius: 4pt,
+  width: 100%,
+  raw("mse <- summary(fit)$sigma^2
 sxx <- sum((trees$Girth - mean(trees$Girth))^2)
-t_crit <- qt(0.975, df = fit$df.residual)
-```
+t_crit <- qt(0.975, df = fit$df.residual)", lang: "r")
+)
 
-```{r, results='asis', echo=FALSE}
-cat(tweave::typst_vars(list(mse = mse, sxx = sxx, t_crit = t_crit)))
-```
+#let vals = (mse: 18.0794, sxx: 295.4374, t_crit: 2.0452)
+
 
 $
 beta_1 plus.minus t^* dot
@@ -115,8 +135,8 @@ sqrt(vals.at("mse", default: 0) / vals.at("sxx", default: 0))
 $
 
 which gives a 95% CI of approximately
-(`r round(slope - t_crit * sqrt(mse / sxx), 3)`,
-`r round(slope + t_crit * sqrt(mse / sxx), 3)`) cubic ft per inch of
+(4.56,
+5.572) cubic ft per inch of
 girth. `vals` is defined once, above the first place it's used
 (`#let vals = (:)` near the top of this file provides a placeholder so
 the live preview always has *something* to resolve `vals` to, even

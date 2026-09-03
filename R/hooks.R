@@ -7,16 +7,19 @@ typst_escape <- function(x) {
   gsub('"', '\\"', x, fixed = TRUE)
 }
 
+# Round a numeric value for display, without flattening small-but-nonzero
+# values (e.g. p-values) to 0 -- falls back to significant digits for those.
+# Shared by format_inline() and typst_vars().
+round_for_display <- function(x, digits) {
+  r <- round(x, digits)
+  ifelse(x != 0 & r == 0, signif(x, digits), r)
+}
+
 # Format a single inline `r expr` value for Typst.
 # Numerics are rounded to `digits`; scientific notation is rendered
 # as Typst math (1.2e+03 -> 1.2 times 10^(3)).
 format_inline <- function(x, digits = 4) {
-  if (is.numeric(x)) {
-    r <- round(x, digits)
-    # Don't let rounding flatten small-but-nonzero values (e.g. p-values)
-    # to 0; fall back to significant digits for those.
-    x <- ifelse(x != 0 & r == 0, signif(x, digits), r)
-  }
+  if (is.numeric(x)) x <- round_for_display(x, digits)
   res <- as.character(x)
   gsub("e\\+?(-?\\d+)", " times 10^(\\1)", res)
 }
