@@ -379,6 +379,9 @@ Reticulate found *a* Python on your system — usually its own isolated virtual 
 - **If you already have the package installed elsewhere:** run `tweave::use_system_python()` once in the R console (see [Python chunks](#python-chunks-optional) above) to point reticulate at that Python permanently.
 - **If you'd rather install into reticulate's own environment:** run `reticulate::py_install(c("numpy", "matplotlib"))` in the R console instead.
 
+**`Using Python: ...\AppData\Local\Microsoft\WindowsApps\python.exe`, then a warning that the file can't be accessed**
+`tweave::use_system_python()` correctly skips this on its own (it verifies a Python actually runs before accepting it) — but if you're on an older version and see this, it's a Windows-only trap: Windows puts a fake placeholder `python.exe` on PATH by default (an "App Execution Alias"), even if you've never touched the Microsoft Store, and it isn't a real interpreter. Turn it off at **Settings > Apps > Advanced app settings > App execution aliases**, switching off the entries for `python.exe` and `python3.exe`, then rerun `tweave::use_system_python()`.
+
 **`error: unknown variable: r2`** (or similar, pointing at an inline `` `r ...` `` inside `$...$`)
 This is the VS Code *preview*, not a real build — see [the live preview gotcha](#one-important-gotcha-the-live-preview-doesnt-run-r-or-python) above for why, and for a rewrite that keeps the preview working (put the value outside the `$...$`, not inside it).
 
