@@ -9,7 +9,6 @@ typst_escape <- function(x) {
 
 # Round a numeric value for display, without flattening small-but-nonzero
 # values (e.g. p-values) to 0 -- falls back to significant digits for those.
-# Shared by format_inline() and typst_vars().
 round_for_display <- function(x, digits) {
   r <- round(x, digits)
   ifelse(x != 0 & r == 0, signif(x, digits), r)

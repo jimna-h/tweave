@@ -2,7 +2,6 @@
 
 export(install)
 export(main)
-export(typst_vars)
 export(uninstall)
 export(use_system_python)
 export(weave)

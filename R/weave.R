@@ -48,7 +48,14 @@ weave <- function(input, output = NULL, quiet = FALSE, keep = FALSE) {
   on.exit(knitr::opts_chunk$set(old_opts), add = TRUE)
   knitr::opts_chunk$set(opts)
 
-  knitr::knit(input, output = output, quiet = quiet)
+  # Without an explicit envir, knitr defaults to running chunks in
+  # parent.frame() -- i.e. weave()'s own function body -- meaning chunk
+  # code shares a namespace with weave()'s internal local variables
+  # (input, output, doc_dir, ...). A fresh environment keeps chunk
+  # execution isolated, the same as knitting from a plain R session
+  # would.
+  knitr::knit(input, output = output, quiet = quiet,
+              envir = new.env(parent = globalenv()))
 
   # Compile straight to <input>.pdf (no ".knit" in the final name).
   # NB: system2() does not quote arguments; paths may contain spaces

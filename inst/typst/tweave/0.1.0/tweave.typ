@@ -101,33 +101,3 @@
 
 // X iid Normal(mu, sigma^2)
 #let iid = $limits(tilde)^"iid"$
-
-// Support for tweave::typst_vars() -- values that need to sit *inside*
-// a complex math expression (a fraction, a square root, an exponent)
-// rather than next to one.
-//
-// Built on Typst's state() rather than a plain dictionary: a plain
-// `#let vals = (:)` can't work here, because a package-defined function
-// referencing `vals` is bound to *that* variable at its own definition
-// site -- it can never see a same-named variable an importing document
-// redefines later (val(dict, key), passing the dict explicitly, was an
-// earlier, more verbose fix for this same problem). State values are
-// specifically designed to be updated later in a document and read
-// correctly from anywhere, which is exactly what's needed here.
-//
-// A results='asis' R chunk calling `typst_vars()` emits
-// `#set_vals((...))`, which updates this; val("key") then reads
-// whatever was most recently set, from anywhere in the document,
-// including deep inside a math expression.
-#let tweave-vals = state("tweave-vals", (:))
-
-// Read a value set by typst_vars() / set_vals(). Returns `default`
-// (0 unless given) if nothing has set that key yet -- including before
-// any asis chunk has run, and in a live preview that never runs R at
-// all -- so val("key") is always valid Typst.
-#let val(key, default: 0) = context tweave-vals.get().at(key, default: default)
-
-// Set (replace) the values val() reads. Only really meant to be called
-// from typst_vars()-generated code, but nothing stops you from calling
-// it directly with your own dictionary.
-#let set_vals(dict) = tweave-vals.update(dict)

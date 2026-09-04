@@ -6,7 +6,7 @@
 // hands a derived stat back to R -- via reticulate's r.<name> / py$<name>
 // bridge, not by re-loading data twice.
 
-#import "@local/tweave:0.1.0": bar, val
+#import "@local/tweave:0.1.0": bar
 
 #set page(paper: "us-letter", margin: (x: 0.9in, y: 0.9in), numbering: "1")
 #set text(font: "Libertinus Serif", size: 11pt)
@@ -85,36 +85,3 @@ py_resid <- reticulate::py$residual_spread
 Typical prediction error is about $bar(e) =$ `r py_resid` cubic ft — small
 enough, relative to a volume range of `r diff(range(trees$Volume))` cubic
 ft, that girth alone is a serviceable field estimate for timber volume.
-
-= A value genuinely inside an equation
-
-The trick above (a symbol in math, its value right next to it in prose)
-only works at the *edge* of a math expression. A standard-error formula
-needs its values in the middle — under a square root, inside a fraction —
-which has no edge to sit at. For that, tweave's `typst_vars()` exposes a
-whole dictionary of values as real Typst source, referenced with
-`val("key")` anywhere in the expression, including deep inside one:
-
-```{r}
-mse <- summary(fit)$sigma^2
-sxx <- sum((trees$Girth - mean(trees$Girth))^2)
-t_crit <- qt(0.975, df = fit$df.residual)
-```
-
-```{r, results='asis', echo=FALSE}
-cat(tweave::typst_vars(list(mse = mse, sxx = sxx, t_crit = t_crit)))
-```
-
-$
-beta_1 plus.minus t^* dot
-sqrt(val("mse") / val("sxx"))
-$
-
-which gives a 95% CI of approximately
-(`r round(slope - t_crit * sqrt(mse / sxx), 3)`,
-`r round(slope + t_crit * sqrt(mse / sxx), 3)`) cubic ft per inch of
-girth. `val()` (imported from tweave, alongside `vals` itself) is a
-shorthand for `vals.at(key, default: 0)`, so there's no need to repeat
-the default at every use site -- and no placeholder to add at the top
-of the document either, since `vals` starts out empty the moment you
-import tweave, before any chunk has run.

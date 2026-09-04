@@ -8,7 +8,6 @@ It ships with a stats-focused Typst package (also called `tweave`) that provides
 
 - **Math shorthands** — `iid` (∼ with "iid" above it), `bar(x)` for sample means, `choose(x, y)` for binomial coefficients, hypotheses `H0`/`HA`, upright distribution names (`Normal`, `Poisson`, `Binomial`, …), and differentials `dx`, `dt`, `dtheta`, …
 - **Inline R values** — `` `r mean(y)` `` in your prose, auto-rounded (set `digits` in R to control precision) with scientific notation rendered as proper Typst math
-- **`typst_vars()` + `val()`** — for values that need to sit *inside* a complex math expression (a fraction, a square root, an exponent) rather than next to one, with no per-document setup needed — [details below](#values-inside-complex-equations-typst_vars)
 - **Python chunks alongside R ones** — ```` ```{python} ```` chunks weave through the same pipeline (via [reticulate](https://rstudio.github.io/reticulate/)), with shared state and matplotlib figure capture, if you'd rather work in Python for a given analysis — [details below](#python-chunks-optional). Already have Python packages installed? `tweave::use_system_python()` points reticulate at your existing setup instead of its own isolated environment, permanently, in one line.
 - **Sensible defaults** — styled code/output blocks, numbered equations, auto-linked URLs, a title block
 
@@ -234,53 +233,10 @@ Type `tweavepy` and Tab for the Python-flavored version. Mixed documents just st
 
 Tinymist's preview button (top-right when a `.typ` file is open) compiles your document *directly*, skipping the knit step — so code chunks show up as plain code blocks, inline `` `r ...` `` / `` `py ...` `` values appear as literal text, and plots are missing. This is normal, not a bug.
 
-**One case is worse than "looks wrong": an inline value inside math mode (`$...$`) will show a red squiggly error, not just odd text.** For example, `$R^2 = `r r2`$` previews as:
+**Avoid putting an inline value inside math mode (`$...$`)** — for example, `$R^2 = `r r2`$`. It's not just cosmetic: Typst always tries to resolve a bare multi-letter run inside `$...$` as a variable or function name (a fundamental Typst rule, not a bug — [see Typst's own docs](https://typst.app/docs/reference/math/) — backticks mean nothing special in math mode), so this produces `error: unknown variable: r2` in the live preview. And since **a single unresolved error like this fails the *entire* compile**, the whole document's preview goes blank, not just that equation, until you remove it.
 
-```
-error: unknown variable: r2
-```
+Keep inline values in ordinary prose instead — `` `r r2` `` outside any `$...$` always works, in the preview and the real build alike. If you want a value styled like part of a formula, put it right next to a self-contained math symbol rather than inside one: `$R^2$ = `r r2`` renders as ordinary text next to the math, not inside it.
 
-This is a fundamental Typst rule, not a bug or a missing setting — [per Typst's own docs](https://typst.app/docs/reference/math/), a bare multi-letter run inside `$...$` is *always* resolved as a variable or function name, with no raw/escape syntax available (backticks mean nothing special in math mode; there's no compiler flag or Tinymist setting to turn this off). And it's not cosmetic to just that line: **a single unresolved error like this fails the *entire* compile**, so the whole document's preview goes blank, not just that equation, until you fix or work around it.
-
-**The fix that keeps the preview working: put the value outside the math zone, not inside it.** A knit-time value can never appear *inside* a live `$...$`, only next to one — but you can put the `=` (or any other trailing operator) inside math and leave only the bare number in prose right after, which keeps the spacing and sizing visually identical to writing it all as one expression:
-
-```typst
-A simple linear fit gives ($R^2 =$ `r r2`).
-```
-
-instead of
-
-```typst
-A simple linear fit gives ($R^2 = `r r2`$).
-```
-
-There's no live `$...$` zone containing unresolved syntax in the raw source this way, so the preview compiles and renders normally at every point while you're editing — no more blank preview. And because this still uses a plain `` `r r2` `` inline substitution (not a hand-built string), tweave's automatic `digits`-rounding keeps working with no extra effort.
-
-**The real tradeoff:** this means no knit-time value can ever sit *inside* Typst math syntax written the ordinary way — only immediately before or after a self-contained math zone. For a trailing `=`-then-value pattern like the one above, that costs nothing visually. For a value that needs to sit in the *middle* of an expression — under a square root, inside a fraction, as part of an exponent — there's a second tool for exactly that case.
-
-### Values inside complex equations: `typst_vars()`
-
-`tweave::typst_vars()` exposes a whole dictionary of R values as real, static Typst source, referenced with `val("key")` — valid Typst syntax at *any* position in a math expression, including deeply nested ones. `vals` (the underlying dictionary) and `val()` (a shorthand for `vals.at(key, default: 0)`) come from importing tweave, so there's nothing to set up at the top of your document — `val("key")` is always valid, even before an `asis` chunk has run or in a live preview that never runs R at all, since it just returns `0` until something real is there.
-
-In a chunk, after the values are computed:
-
-```typst
-```{r, results='asis', echo=FALSE}
-cat(tweave::typst_vars(list(mse = mse, sxx = sxx, t_crit = t_crit)))
-```
-```
-
-Then anywhere — including buried inside a square root:
-
-```typst
-$ beta_1 plus.minus t^* dot sqrt(val("mse") / val("sxx")) $
-```
-
-`typst_vars()` rounds numbers using the same `digits` convention as inline substitution, so there's no separate rounding step to remember. Need a different default than `0` for a particular value, or a second, differently-named dictionary? `vals.at("key", default: X)` is still there directly. See [`examples/example3.typ`](examples/example3.typ) for the full worked pattern.
-
-This is more setup than the trailing-`=` trick, so reach for it only when a value genuinely needs to sit inside an expression rather than next to one.
-
-If you'd rather not restructure existing math, or run into another case Typst won't parse pre-knit, the fallback is simply: ignore the preview error on that line and use the preview for everything else.
 
 Use the preview for checking **layout, math, and prose**, and use **Ctrl + Shift + B** whenever you need to see **actual results**. If you want a live-ish view of the real output, run a build and open `yourfile.pdf` in a VS Code tab — it refreshes each time you rebuild.
 
@@ -399,7 +355,7 @@ This is a known, currently-open Python 3.14 / matplotlib compatibility issue (`R
 A real bug, fixed in 0.7.1: R's `.Renviron` file format treats backslash as an escape character, so an unescaped Windows path written there gets every backslash silently stripped the next time it's read. `tweave::use_system_python()` converts to forward slashes (which Windows accepts everywhere) before saving. If your `.Renviron` already has a corrupted entry from an older version, just rerun `tweave::use_system_python()` on 0.7.1+ — it overwrites the existing line with a corrected one and also fixes the *current* session immediately, without needing a restart.
 
 **`error: unknown variable: r2`** (or similar, pointing at an inline `` `r ...` `` inside `$...$`)
-This is the VS Code *preview*, not a real build — see [the live preview gotcha](#one-important-gotcha-the-live-preview-doesnt-run-r-or-python) above for why, and for a rewrite that keeps the preview working (put the value outside the `$...$`, not inside it).
+This is the VS Code *preview*, not a real build — see [the live preview gotcha](#one-important-gotcha-the-live-preview-doesnt-run-r-or-python) above. Move the value out of the math zone into plain prose instead; that's what actually fixes it, not just works around the preview.
 
 **`error: package not found ... @local/tweave:0.1.0`**
 The Typst template package isn't installed. Run `tweave::install()` in R — it places it in the right folder for your OS automatically.
