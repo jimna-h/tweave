@@ -36,24 +36,18 @@ install <- function(bin_dir = NULL) {
 
 # -- Typst package -------------------------------------------------------
 
-bundled_typst_packages <- function() {
-  root <- system.file("typst", package = "tweave")
-  if (root == "") stop("Bundled Typst packages not found; reinstall tweave.",
-                       call. = FALSE)
-  list.files(root)  # e.g. "tweave", "pretty-questions"
-}
-
 install_typst_package <- function() {
-  root <- system.file("typst", package = "tweave")
-  for (pkg in bundled_typst_packages()) {
-    dest <- file.path(typst_local_packages_dir(), pkg)
-    dir.create(dest, recursive = TRUE, showWarnings = FALSE)
-    ok <- file.copy(list.files(file.path(root, pkg), full.names = TRUE), dest,
-                    recursive = TRUE, overwrite = TRUE)
-    if (!all(ok)) stop("Could not copy the Typst package to ", dest,
-                       call. = FALSE)
-    message("Typst package installed: ", dest)
-  }
+  src <- system.file("typst", "tweave", package = "tweave")
+  if (src == "") stop("Bundled Typst package not found; reinstall tweave.",
+                      call. = FALSE)
+
+  dest <- file.path(typst_local_packages_dir(), "tweave")
+  dir.create(dest, recursive = TRUE, showWarnings = FALSE)
+  ok <- file.copy(list.files(src, full.names = TRUE), dest,
+                  recursive = TRUE, overwrite = TRUE)
+  if (!all(ok)) stop("Could not copy the Typst package to ", dest,
+                     call. = FALSE)
+  message("Typst package installed: ", dest)
 }
 
 # Platform-correct location of Typst's @local packages.
@@ -134,14 +128,12 @@ dir_on_path <- function(dir) {
 uninstall <- function(bin_dir = NULL) {
   removed <- FALSE
 
-  # 1. Bundled Typst packages (tweave + pretty-questions)
-  for (pkg in bundled_typst_packages()) {
-    typst_pkg <- file.path(typst_local_packages_dir(), pkg)
-    if (dir.exists(typst_pkg)) {
-      unlink(typst_pkg, recursive = TRUE)
-      message("Removed Typst package: ", typst_pkg)
-      removed <- TRUE
-    }
+  # 1. Typst package
+  typst_pkg <- file.path(typst_local_packages_dir(), "tweave")
+  if (dir.exists(typst_pkg)) {
+    unlink(typst_pkg, recursive = TRUE)
+    message("Removed Typst package: ", typst_pkg)
+    removed <- TRUE
   }
 
   # 2. CLI shim

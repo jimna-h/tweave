@@ -1,26 +1,8 @@
 test_that("find_system_python resolves via sys.executable, not file guessing", {
   skip_if(Sys.which("python3") == "", "no system python3 in this environment")
-  # This exercises the NEW primary mechanism directly: running the
-  # candidate by name and asking it for its own path, rather than the
-  # PATH-scanning fallback.
+  # Exercises the primary discovery mechanism directly.
   found <- tweave:::find_system_python()
   expect_true(tweave:::python_is_usable(found))
-})
-
-test_that("windows_cmd_wrap constructs a well-formed cmd.exe invocation", {
-  wrapped <- tweave:::windows_cmd_wrap("py", c("-3", "C:/temp/probe.py"))
-  expect_equal(wrapped$exe, "cmd")
-  expect_equal(wrapped$args, c("/c", 'py -3 C:/temp/probe.py'))
-
-  # A path containing spaces must arrive here already shQuote()'d by the
-  # caller (run_python_probe does this, using cmd-style quoting on
-  # Windows) -- confirm the wrapper preserves an already-quoted argument
-  # intact rather than re-mangling it. Forced to type="cmd" explicitly
-  # here so this assertion is meaningful even when this test itself
-  # runs on a non-Windows machine.
-  quoted_path <- shQuote("C:/Program Files/probe.py", type = "cmd")
-  wrapped2 <- tweave:::windows_cmd_wrap("python", quoted_path)
-  expect_true(grepl('"C:/Program Files/probe.py"', wrapped2$args[2], fixed = TRUE))
 })
 
 test_that("run_python_probe resolves a real interpreter's own path", {
@@ -187,20 +169,6 @@ test_that("python_is_usable accepts a real version string", {
   expect_true(tweave:::python_is_usable(fake_real))
 })
 
-test_that("python_looks_like_store_alias recognizes the Windows trap", {
-  expect_true(tweave:::python_looks_like_store_alias(
-    "C:\\Users\\sirja\\AppData\\Local\\Microsoft\\WindowsApps\\python.exe"
-  ))
-  # Windows sometimes reports this as an abbreviated 8.3 short path
-  expect_true(tweave:::python_looks_like_store_alias(
-    "C:\\Users\\sirja\\AppData\\Local\\MICROS~1\\WINDOW~1\\python.exe"
-  ))
-  expect_false(tweave:::python_looks_like_store_alias(
-    "C:\\Python312\\python.exe"
-  ))
-  expect_false(tweave:::python_looks_like_store_alias("/usr/bin/python3"))
-})
-
 test_that("python_is_usable rejects a non-functional file and accepts a real interpreter", {
   fake <- withr::local_tempfile()
   file.create(fake)  # exists, but isn't executable Python
@@ -208,104 +176,4 @@ test_that("python_is_usable rejects a non-functional file and accepts a real int
 
   skip_if(Sys.which("python3") == "", "no system python3 in this environment")
   expect_true(tweave:::python_is_usable(Sys.which("python3")))
-})
-
-test_that("python_path_candidates finds all PATH matches, not just the first", {
-  skip_if(Sys.which("python3") == "", "no system python3 in this environment")
-  found <- tweave:::python_path_candidates("python3")
-  expect_true(length(found) >= 1)
-  expect_true(any(file.exists(found)))
-})
-
-test_that("find_system_python still accepts a real interpreter even under a WindowsApps-style path", {
-  # A legitimate, working Python installed from the Microsoft Store
-  # lives under the same directory as the broken alias stub -- path
-  # alone can't tell them apart, only behavior can. Simulate: a broken
-  # alias-like path (fails --version) and a working one (passes),
-  # both under directories containing "WindowsApps", to confirm the
-  # working one still gets found despite looking suspicious by path.
-  broken_dir <- withr::local_tempdir()
-  windowsapps_like <- file.path(broken_dir, "WindowsApps")
-  dir.create(windowsapps_like)
-  writeLines(c("#!/bin/sh",
-    'echo "Python was not found; run without arguments to install..."',
-    "exit 0"), file.path(windowsapps_like, "python3"))
-  Sys.chmod(file.path(windowsapps_like, "python3"), "0755")
-
-  working_dir <- withr::local_tempdir()
-  working_windowsapps_like <- file.path(working_dir, "WindowsApps")
-  dir.create(working_windowsapps_like)
-  writeLines(c("#!/bin/sh", 'echo "Python 3.11.9"', "exit 0"),
-             file.path(working_windowsapps_like, "python3"))
-  Sys.chmod(file.path(working_windowsapps_like, "python3"), "0755")
-
-  withr::local_envvar(PATH = paste(windowsapps_like, working_windowsapps_like,
-                                   sep = .Platform$path.sep))
-
-  found <- tweave:::find_system_python()
-  expect_equal(found, file.path(working_windowsapps_like, "python3"))
-})
-
-test_that("find_system_python skips a fake alias planted ahead of a real interpreter", {
-  skip_if(Sys.which("python3") == "", "no system python3 in this environment")
-  real_dir <- dirname(Sys.which("python3"))
-
-  # Simulate the Windows situation: a non-functional "python3" earlier
-  # on PATH than the real one.
-  fake_dir <- withr::local_tempdir()
-  file.create(file.path(fake_dir, "python3"))
-  Sys.chmod(file.path(fake_dir, "python3"), "0755")
-
-  withr::local_envvar(PATH = paste(fake_dir, Sys.getenv("PATH"), sep = .Platform$path.sep))
-
-  found <- tweave:::find_system_python()
-  expect_true(tweave:::python_is_usable(found))
-  expect_false(identical(dirname(found), fake_dir))
-})
-
-test_that("find_system_python prefers a non-Store candidate across different command names", {
-  # Isolates the NEW primary-stage logic specifically: "python" resolves
-  # to a Store-like path, "python3" resolves to a normal one -- these
-  # are different command names, so this can't be satisfied by the
-  # PATH-scanning fallback (which only ever handles one name at a time).
-  store_dir <- withr::local_tempdir()
-  store_like <- file.path(store_dir, "WindowsApps")
-  dir.create(store_like)
-  writeLines(c("#!/bin/sh", 'echo "Python 3.11.9"', "exit 0"),
-             file.path(store_like, "python"))
-  Sys.chmod(file.path(store_like, "python"), "0755")
-
-  normal_dir <- withr::local_tempdir()
-  writeLines(c("#!/bin/sh", 'echo "Python 3.12.1"', "exit 0"),
-             file.path(normal_dir, "python3"))
-  Sys.chmod(file.path(normal_dir, "python3"), "0755")
-
-  withr::local_envvar(PATH = paste(store_like, normal_dir, sep = .Platform$path.sep))
-
-  found <- tweave:::find_system_python()
-  expect_false(tweave:::python_looks_like_store_alias(found))
-  expect_equal(basename(found), "python3")
-})
-
-test_that("find_system_python prefers a non-Store candidate over a Store one, both usable", {
-  # A Store-packaged Python can pass the shallow usability check and
-  # still fail later on DLL access -- prefer a normal install when one
-  # exists, even if a Store one also technically "works" by this check.
-  store_dir <- withr::local_tempdir()
-  store_like <- file.path(store_dir, "WindowsApps")
-  dir.create(store_like)
-  writeLines(c("#!/bin/sh", 'echo "Python 3.11.9"', "exit 0"),
-             file.path(store_like, "python3"))
-  Sys.chmod(file.path(store_like, "python3"), "0755")
-
-  normal_dir <- withr::local_tempdir()
-  writeLines(c("#!/bin/sh", 'echo "Python 3.12.1"', "exit 0"),
-             file.path(normal_dir, "python3"))
-  Sys.chmod(file.path(normal_dir, "python3"), "0755")
-
-  withr::local_envvar(PATH = paste(store_like, normal_dir, sep = .Platform$path.sep))
-
-  found <- tweave:::find_system_python()
-  expect_false(tweave:::python_looks_like_store_alias(found))
-  expect_equal(dirname(found), normal_dir)
 })

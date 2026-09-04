@@ -17,6 +17,14 @@
 #' every future `tweave` build picks it up automatically without you
 #' repeating this.
 #'
+#' Looks for a normal, traditionally-installed Python (python.org,
+#' winget, conda). Deliberately does not try to detect or work around
+#' Microsoft Store-packaged Python: it's locked down by Windows' own
+#' AppX security model in ways that can fail unpredictably depending on
+#' how deeply nested the calling process is, and no amount of scripting
+#' from R can reliably fix that. If that's the only Python this finds,
+#' install a normal one from <https://python.org> instead.
+#'
 #' @param python Path to the Python interpreter to use. Defaults to
 #'   whatever `python` (Windows) or `python3` (macOS/Linux) resolves to
 #'   on your PATH -- the same interpreter a plain `pip install` targets.
@@ -31,13 +39,10 @@ use_system_python <- function(python = NULL, persist = TRUE) {
   if (python == "") {
     stop(
       "No working Python found on your PATH.\n",
-      "  If you're on Windows and know you've installed Python, this can ",
-      "happen when a Microsoft Store \"App Execution Alias\" stub shadows ",
-      "your real install. Try: Settings > Apps > Advanced app settings > ",
-      "App execution aliases, and turn OFF the entries for python.exe and ",
-      "python3.exe. Then try again.\n",
-      "  Otherwise, install Python from https://python.org (on Windows, ",
-      "check \"Add python.exe to PATH\" during install) and try again.",
+      "  Install Python from https://python.org (on Windows, check ",
+      "\"Add python.exe to PATH\" during install) and try again.\n",
+      "  Avoid the Microsoft Store version if you have a choice -- it's ",
+      "known to cause hard-to-diagnose failures with R/reticulate.",
       call. = FALSE
     )
   }
@@ -72,84 +77,41 @@ use_system_python <- function(python = NULL, persist = TRUE) {
   invisible(python)
 }
 
-# The Python a plain `pip install` would target. Rather than guessing
-# file paths on PATH and checking file.exists() -- which doesn't work
-# reliably against Windows's App Execution Alias stubs, since those
-# aren't normal files, they're reparse-point stubs that only behave
-# correctly when invoked by name through the OS's own command
-# resolution -- this runs each candidate command *by name* (exactly
-# like typing it in a terminal) and asks the running interpreter for
-# its own canonical path via `sys.executable`. That's the genuine
-# install location, never the alias stub itself, since the alias only
-# affects how Python gets *started*, not what it reports once running.
+# The Python a plain `pip install` would target: whatever `python` (or
+# `python3`) resolves to on PATH, or -- on Windows, tried first -- the
+# official Python Launcher (py.exe), which is the standard way to find
+# "the" Python on a machine with several installed. py.exe is itself a
+# dispatcher rather than an interpreter, so it's asked for the real
+# interpreter path via sys.executable; a plain Sys.which() result is
+# used as-is for "python"/"python3", since that's already a real path.
 find_system_python <- function() {
-  candidates <- if (.Platform$OS.type == "windows") {
-    list(c("py", "-3"), "python", "python3")
-  } else {
-    list("python3", "python")
-  }
-
-  # Collect every candidate that passes the basic usability check, then
-  # prefer a non-Store one if any exists -- a Microsoft Store-packaged
-  # Python can pass this shallow check (it launches, it reports its own
-  # sys.executable correctly) and still fail later loading its own DLLs,
-  # because Store app packages are locked down to processes carrying the
-  # right AppX capability token, which doesn't always propagate through
-  # a deeply nested process tree (R -> cmd.exe -> python.exe). A
-  # traditionally-installed Python has no such restriction.
-  usable <- character()
-  for (cmd in candidates) {
-    resolved <- run_python_probe(cmd)
+  if (.Platform$OS.type == "windows" && Sys.which("py") != "") {
+    resolved <- run_python_probe(c("py", "-3"))
     status <- attr(resolved, "status")
-    if (!is.null(status) && status != 0) next
-    if (length(resolved) != 1 || resolved == "") next
-    if (python_is_usable(resolved)) usable <- c(usable, resolved)
-  }
-  if (length(usable) > 0) {
-    is_store <- vapply(usable, python_looks_like_store_alias, logical(1))
-    if (any(!is_store)) return(usable[!is_store][1])
-    return(usable[1])
+    ok <- (is.null(status) || status == 0) && length(resolved) == 1 &&
+      resolved != ""
+    if (ok && python_is_usable(resolved)) return(resolved)
   }
 
-  # Last-resort fallback: manually scan PATH, in case neither `python`,
-  # `python3`, nor the `py` launcher are invokable by name but a real
-  # interpreter is still findable as a file. Known to be unreliable for
-  # Windows alias stubs specifically, but harmless to try.
   names <- if (.Platform$OS.type == "windows") {
     c("python", "python3")
   } else {
     c("python3", "python")
   }
   for (n in names) {
-    scan_candidates <- python_path_candidates(n)
-    is_alias_path <- vapply(scan_candidates, python_looks_like_store_alias,
-                            logical(1))
-    ordered <- c(scan_candidates[!is_alias_path], scan_candidates[is_alias_path])
-    for (candidate in ordered) {
-      if (python_is_usable(candidate)) return(candidate)
-    }
+    p <- unname(Sys.which(n))
+    if (p != "" && python_is_usable(p)) return(p)
   }
 
   ""
 }
 
 # Run `<cmd> <probe-script>` and return the output -- where the probe
-# script is a small temp .py file, not an inline one-liner. Passing a
-# one-liner containing semicolons and parentheses through nested shell
-# quoting (R -> cmd.exe -> the target program) is one of the most
-# fragile corners of Windows scripting; a file path is a much narrower,
-# better-understood quoting problem (usually needing no quoting at all).
-#
-# On Windows, this goes through cmd.exe /c explicitly rather than
-# spawning the process directly: a Windows App Execution Alias is a
-# special reparse point (IO_REPARSE_TAG_APPEXECLINK) that the generic
-# kernel I/O layer doesn't understand at all -- only launchers with
-# specific support for it (cmd.exe, PowerShell, Explorer) can resolve
-# and redirect through one. A generic process-spawn (what a direct
-# system2() call amounts to) can fail on exactly the same alias that
-# `cmd.exe /c python ...` handles correctly -- this mirrors a
-# documented case of a different shell (4NT) getting a flat "No access
-# to the file" error on an alias cmd.exe resolves fine.
+# script is a small temp .py file rather than an inline one-liner, since
+# passing code containing semicolons and parentheses through shell
+# quoting is a needless source of fragility a plain file path avoids.
+# Only used for the `py` launcher, which needs to be asked what real
+# interpreter it points to.
 run_python_probe <- function(cmd) {
   exe <- cmd[[1]]
   extra_args <- cmd[-1]
@@ -159,49 +121,11 @@ run_python_probe <- function(cmd) {
   writeLines("import sys; print(sys.executable)", script)
 
   args <- c(extra_args, shQuote(script))
-
-  if (.Platform$OS.type == "windows") {
-    wrapped <- windows_cmd_wrap(exe, args)
-    exe <- wrapped$exe
-    args <- wrapped$args
-  }
-
   tryCatch(
     system2(exe, args, stdout = TRUE, stderr = TRUE),
     error = function(e) character(),
     warning = function(w) character()
   )
-}
-
-# Pure string-construction logic for routing a command through
-# `cmd.exe /c`, factored out so it's testable on any platform (the
-# actual invocation can only be verified on real Windows, but the
-# command-line it constructs can be checked everywhere).
-windows_cmd_wrap <- function(exe, args) {
-  list(exe = "cmd", args = c("/c", paste(c(exe, args), collapse = " ")))
-}
-
-# All PATH entries matching an executable name, in PATH order -- unlike
-# Sys.which(), which only ever returns the first match. Needed because
-# the first "python" on PATH is often the Windows Store alias stub, and
-# we need to be able to look past it to a real install further along.
-python_path_candidates <- function(name) {
-  exe <- if (.Platform$OS.type == "windows") paste0(name, ".exe") else name
-  dirs <- strsplit(Sys.getenv("PATH"), .Platform$path.sep, fixed = TRUE)[[1]]
-  candidates <- file.path(dirs, exe)
-  candidates[file.exists(candidates)]
-}
-
-# Windows's App Execution Alias stubs live under a well-known path,
-# whether Windows reports it in full or as an abbreviated 8.3 short path
-# (e.g. "...\MICROS~1\WINDOW~1\python.exe"). Used only to *deprioritize*
-# a candidate (try it last) -- not to exclude it outright, since a real,
-# working Python installed from the Microsoft Store also lives under
-# this same directory. Only the actual --version behavior in
-# python_is_usable() is authoritative.
-python_looks_like_store_alias <- function(path) {
-  grepl("WindowsApps", path, ignore.case = TRUE) ||
-    grepl("MICROS~.\\\\WINDOW~", path, ignore.case = TRUE)
 }
 
 # TRUE if `path --version` actually runs and prints a real version

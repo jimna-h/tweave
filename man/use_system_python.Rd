@@ -28,3 +28,12 @@ instead -- for the current session, and (by default) permanently, so
 every future `tweave` build picks it up automatically without you
 repeating this.
 }
+\details{
+Looks for a normal, traditionally-installed Python (python.org,
+winget, conda). Deliberately does not try to detect or work around
+Microsoft Store-packaged Python: it's locked down by Windows' own
+AppX security model in ways that can fail unpredictably depending on
+how deeply nested the calling process is, and no amount of scripting
+from R can reliably fix that. If that's the only Python this finds,
+install a normal one from <https://python.org> instead.
+}

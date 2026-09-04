@@ -8,7 +8,7 @@ It ships with a stats-focused Typst package (also called `tweave`) that provides
 
 - **Math shorthands** — `iid` (∼ with "iid" above it), `bar(x)` for sample means, `choose(x, y)` for binomial coefficients, hypotheses `H0`/`HA`, upright distribution names (`Normal`, `Poisson`, `Binomial`, …), and differentials `dx`, `dt`, `dtheta`, …
 - **Inline R values** — `` `r mean(y)` `` in your prose, auto-rounded (set `digits` in R to control precision) with scientific notation rendered as proper Typst math
-- **`typst_vars()`** — for values that need to sit *inside* a complex math expression (a fraction, a square root, an exponent) rather than next to one — [details below](#values-inside-complex-equations-typst_vars)
+- **`typst_vars()` + `val()`** — for values that need to sit *inside* a complex math expression (a fraction, a square root, an exponent) rather than next to one, with no per-document setup needed — [details below](#values-inside-complex-equations-typst_vars)
 - **Python chunks alongside R ones** — ```` ```{python} ```` chunks weave through the same pipeline (via [reticulate](https://rstudio.github.io/reticulate/)), with shared state and matplotlib figure capture, if you'd rather work in Python for a given analysis — [details below](#python-chunks-optional). Already have Python packages installed? `tweave::use_system_python()` points reticulate at your existing setup instead of its own isolated environment, permanently, in one line.
 - **Sensible defaults** — styled code/output blocks, numbered equations, auto-linked URLs, a title block
 
@@ -260,13 +260,7 @@ There's no live `$...$` zone containing unresolved syntax in the raw source this
 
 ### Values inside complex equations: `typst_vars()`
 
-`tweave::typst_vars()` exposes a whole dictionary of R values as real, static Typst source, referenced with `.at("key", default: ...)` — valid Typst syntax at *any* position in a math expression, including deeply nested ones, and safe pre-knit because `default:` supplies a placeholder before the real value exists.
-
-Once, near the top of the document:
-
-```typst
-#let vals = (:)
-```
+`tweave::typst_vars()` exposes a whole dictionary of R values as real, static Typst source, referenced with `val("key")` — valid Typst syntax at *any* position in a math expression, including deeply nested ones. `vals` (the underlying dictionary) and `val()` (a shorthand for `vals.at(key, default: 0)`) come from importing tweave, so there's nothing to set up at the top of your document — `val("key")` is always valid, even before an `asis` chunk has run or in a live preview that never runs R at all, since it just returns `0` until something real is there.
 
 In a chunk, after the values are computed:
 
@@ -279,10 +273,10 @@ cat(tweave::typst_vars(list(mse = mse, sxx = sxx, t_crit = t_crit)))
 Then anywhere — including buried inside a square root:
 
 ```typst
-$ beta_1 plus.minus t^* dot sqrt(vals.at("mse", default: 0) / vals.at("sxx", default: 0)) $
+$ beta_1 plus.minus t^* dot sqrt(val("mse") / val("sxx")) $
 ```
 
-The pre-knit source always has *something* to resolve `vals` to (the empty placeholder, or an earlier `results='asis'` call), so the preview never breaks — and `typst_vars()` rounds numbers using the same `digits` convention as inline substitution, so there's no separate rounding step to remember. See [`examples/example3.typ`](examples/example3.typ) for the full worked pattern.
+`typst_vars()` rounds numbers using the same `digits` convention as inline substitution, so there's no separate rounding step to remember. Need a different default than `0` for a particular value, or a second, differently-named dictionary? `vals.at("key", default: X)` is still there directly. See [`examples/example3.typ`](examples/example3.typ) for the full worked pattern.
 
 This is more setup than the trailing-`=` trick, so reach for it only when a value genuinely needs to sit inside an expression rather than next to one.
 
@@ -343,6 +337,8 @@ tweave::use_system_python()
 
 This finds the Python that a plain `pip install` targets, points reticulate at it, and — by default — saves that choice to your `.Renviron`, so every future `tweave` build uses it automatically. You won't need to repeat this per document, or even remember you did it.
 
+**One thing to know:** each Python interpreter has its own separate packages. If you ever point this at a *different* Python than before (a different version, a different install), you're starting from an empty package library for that one — reinstall what you need (`reticulate::py_install(c("numpy", "matplotlib"))`, or `pip install` directly for that interpreter) before your next build.
+
 **Want a specific interpreter or virtual environment instead** (a named conda env, a project-specific venv)? Add this near the top of your document (in an `include=FALSE` chunk, before any other Python chunk):
 
 ```{r, include=FALSE}
@@ -377,8 +373,8 @@ The shim folder isn't on your PATH, or your terminal predates the install. Open 
 **`typst : The term 'typst' is not recognized...`** or tweave says the Typst CLI is missing
 Typst isn't installed, or your terminal was open when you installed it. Close and reopen the terminal. If it persists, reinstall via `winget install --id Typst.Typst` (Windows) or `brew install typst` (macOS).
 
-**`tweave: could not find R`**
-The Windows shim looks for R on your PATH, then in the registry. This message means R isn't installed (or was installed in a very unusual way). Install R from [cran.r-project.org](https://cran.r-project.org/) with default options.
+**`tweave: Rscript not found on PATH`**
+This means R isn't installed, or its `bin` folder isn't on your PATH. Install R from [cran.r-project.org](https://cran.r-project.org/) with default options, then open a new terminal. If it's already installed, add its `bin` folder (e.g. `C:\Program Files\R\R-4.x.x\bin`) to your PATH manually.
 
 **A `{python}` chunk is silently skipped, or errors about an unknown engine**
 `reticulate` isn't installed — run `install.packages("reticulate")` and rebuild. If it *is* installed but errors about modules it can't find, reticulate is likely using an isolated venv instead of your real Python — run `tweave::use_system_python()` once (see [Python chunks](#python-chunks-optional) above), and check `reticulate::py_config()`.
@@ -389,18 +385,18 @@ Reticulate found *a* Python on your system — usually its own isolated virtual 
 - **If you already have the package installed elsewhere:** run `tweave::use_system_python()` once in the R console (see [Python chunks](#python-chunks-optional) above) to point reticulate at that Python permanently.
 - **If you'd rather install into reticulate's own environment:** run `reticulate::py_install(c("numpy", "matplotlib"))` in the R console instead.
 
-**`Using Python: ...\AppData\Local\Microsoft\WindowsApps\python.exe`, then a warning that the file can't be accessed**
-`tweave::use_system_python()` (0.7.0+) resolves your Python by running `python`/`python3`/the `py` launcher exactly the way a terminal would — on Windows, explicitly through `cmd.exe`, since App Execution Aliases are a special kind of file (a reparse point) that only certain launchers know how to resolve — and asks the running interpreter for its own real path, rather than guessing file locations. This correctly finds a real, working Python even if it happens to be a legitimate Microsoft Store install living in the same directory as the broken alias stub. (Versions 0.6.1–0.6.6 tried progressively closer fixes but each had a real bug — a substring check fooled by the alias's own rejection text, then a file-existence check that doesn't work reliably against alias reparse points; if you're on an older version, update first.) If you still see this after updating to 0.7.0+, it's a Windows-only trap regardless: Windows puts a fake placeholder `python.exe` on PATH by default (an "App Execution Alias"), even if you've never touched the Microsoft Store, and it isn't a real interpreter. Turn it off at **Settings > Apps > Advanced app settings > App execution aliases**, switching off the entries for `python.exe` and `python3.exe` (but *not* any entry tied to a Python version you've actually installed from the Store — check with `python --version` in a new terminal first), then rerun `tweave::use_system_python()`.
+**`tweave::use_system_python()` finds a Python under `WindowsApps`, or a chunk fails with `... python311.dll - Access is denied.`**
+This is Python installed from the **Microsoft Store**, not a tweave or reticulate bug — and not something worth working around. Store-distributed Python is locked down by Windows' own AppX security model: only processes carrying the correct package "capability token" can read files inside its install folder, and that token doesn't reliably propagate through a deeply nested process tree (an R session running a Python chunk build is exactly that). It can sometimes launch fine and still fail loading its own DLL later, which makes failures show up unpredictably.
 
-If it *still* fails after all that, please open an issue with the exact output — the Windows-specific `cmd.exe` routing in this function is reasoned through carefully but could not be tested on a real Windows machine while building it.
+`tweave::use_system_python()` doesn't try to detect or route around this — it just looks for a normal, traditionally-installed Python. If the Store version is the *only* one it finds, install a real one from **[python.org](https://www.python.org/downloads/)** (check "Add python.exe to PATH" during install), then rerun `tweave::use_system_python()`.
+
+**Note:** each Python interpreter has its own separate set of installed packages. If you point `use_system_python()` at a *different* Python than before (including installing a fresh one to get off the Store version), you're starting from an empty package library for it — reinstall what you need: `reticulate::py_install(c("numpy", "matplotlib"))`.
+
+**A `{python}` chunk using matplotlib fails partway through** (numpy works fine, but something after it doesn't) **on Python 3.14 specifically**
+This is a known, currently-open Python 3.14 / matplotlib compatibility issue (`RecursionError` in `path.py`, [matplotlib#30370](https://github.com/matplotlib/matplotlib/issues/30370)) — not a tweave or reticulate bug. Brand-new Python releases typically take a couple of months for the scientific Python ecosystem (matplotlib, Pillow, contourpy, and their compiled extensions) to fully catch up. Until it's fixed upstream, install an older, stable Python (3.12 or 3.13) from python.org and point tweave at it: `tweave::use_system_python("C:/path/to/Python312/python.exe")` — then reinstall your packages for that interpreter, as above.
 
 **Warnings about `RETICULATE_PYTHON is set to "C:UserssirjaAppDataLocal..."` with all the backslashes missing**
-A real bug, fixed in 0.7.1: R's `.Renviron` file format treats backslash as an escape character, so an unescaped Windows path written there gets every backslash silently stripped the next time it's read. `tweave::use_system_python()` now converts to forward slashes (which Windows accepts everywhere) before saving. If your `.Renviron` already has a corrupted entry from an older version, just rerun `tweave::use_system_python()` on 0.7.1+ — it overwrites the existing line with a corrected one and also fixes the *current* session immediately, without needing a restart.
-
-**A `{python}` chunk fails with `... python311.dll - Access is denied.`, pointing at a path under `WindowsApps`**
-This is Python installed from the **Microsoft Store**, not a tweave or reticulate bug. Store-distributed Python packages are locked down by Windows' own AppX security model — only processes carrying the correct package "capability token" can read files inside their install folder, and that token doesn't always propagate correctly through a deeply nested process tree (an R session launching a Python chunk build is exactly that). The interpreter can launch and even report its own path correctly, then still fail loading its own DLL later — which is why this can surface as a build failure even after `tweave::use_system_python()` reports success.
-
-The fix: install Python from **[python.org](https://www.python.org/downloads/)** instead (check "Add python.exe to PATH" during install), then rerun `tweave::use_system_python()`. A traditional install has none of the Store package's access restrictions. (0.7.2+ already prefers a non-Store Python automatically if you have one — this only bites when the Store version is the *only* Python tweave can find.)
+A real bug, fixed in 0.7.1: R's `.Renviron` file format treats backslash as an escape character, so an unescaped Windows path written there gets every backslash silently stripped the next time it's read. `tweave::use_system_python()` converts to forward slashes (which Windows accepts everywhere) before saving. If your `.Renviron` already has a corrupted entry from an older version, just rerun `tweave::use_system_python()` on 0.7.1+ — it overwrites the existing line with a corrected one and also fixes the *current* session immediately, without needing a restart.
 
 **`error: unknown variable: r2`** (or similar, pointing at an inline `` `r ...` `` inside `$...$`)
 This is the VS Code *preview*, not a real build — see [the live preview gotcha](#one-important-gotcha-the-live-preview-doesnt-run-r-or-python) above for why, and for a rewrite that keeps the preview working (put the value outside the `$...$`, not inside it).

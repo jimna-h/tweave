@@ -65,3 +65,34 @@ test_that("typst_vars output is valid Typst, pre- and post-knit shaped", {
   ), tmp)
   expect_true(compiles_cleanly(tmp))
 })
+
+test_that("the bundled package's val()/vals work with no per-document setup", {
+  skip_if(Sys.which("typst") == "", "Typst CLI not available")
+  pkg_dir <- system.file("typst", "tweave", package = "tweave")
+  skip_if(pkg_dir == "", "tweave Typst package not found in installed R package")
+
+  local_pkgs <- withr::local_tempdir()
+  dest <- file.path(local_pkgs, "typst", "packages", "local", "tweave")
+  dir.create(dest, recursive = TRUE)
+  file.copy(list.files(pkg_dir, full.names = TRUE), dest, recursive = TRUE)
+  withr::local_envvar(XDG_DATA_HOME = local_pkgs)
+
+  tmp <- withr::local_tempfile(fileext = ".typ")
+
+  # No #let vals = (:) anywhere -- importing the package alone must be
+  # enough for val("anything") to be valid, pre-knit.
+  writeLines(c(
+    '#import "@local/tweave:0.1.0": val',
+    '$ sqrt(val("mse") / val("sxx")) $'
+  ), tmp)
+  expect_true(compiles_cleanly(tmp))
+
+  # A results='asis'-style #let vals = (...) later in the same document
+  # shadows the package's empty one for everything after it.
+  writeLines(c(
+    '#import "@local/tweave:0.1.0": val',
+    '#let vals = (mse: 18.08, sxx: 295.44)',
+    '$ sqrt(val("mse") / val("sxx")) $'
+  ), tmp)
+  expect_true(compiles_cleanly(tmp))
+})
